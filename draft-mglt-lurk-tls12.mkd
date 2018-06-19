@@ -109,6 +109,8 @@ instantaneously suspend the delegation with a suspicious node. On the
 other hand the LURK Extension 'tls12' introduces some latency, and is
 not as scalable as STAR or delegated credential solutions. 
 
+[](IB: a comparison should be made here)
+
 The LURK Extension 'tls12' is seen as a complementary to the STAR and
 "delegated credentials". The LURK Extension 'tls12' is a back end
 solution that does not require any modifications from TLS Client or the
@@ -181,7 +183,6 @@ struct {
 
 
 
-
 # rsa_master
 
 A exchange of type "rsa_master" enables the LURK Client to delegate the
@@ -230,7 +231,7 @@ of RSA keys is described in {{!RFC8017}}. The binary representation of
 ECC keys is the subjectPublicKeyInfo structure defined in {{!RFC5480}}.
 
 pfs
-: the one-way function used by LURK to implement Perfect Forward
+: the one-way hash function (OWHF) used by LURK to implement Perfect Forward
 Secrecy.
 
 client_random 
@@ -247,16 +248,52 @@ EncryptedPreMasterSecret : The encrypted master secret as defined in
 
 ### Perfect Forward Secrecy {#sec-pfs}
 
-This document defines a mechanism based on a one way functions (pfs) to
-prevent an attacker to send a request to the LURK Server to replay an
-observed TLS handshake. More explicitly, let R being a newly and
-randomly generated server_random value.  The value of server_random in
-the TLS exchange is pfs( R ), while the value used between the LURK
-Client and the LURK Server is R. The one way function properties makes
-impossible to initiate a request to the LURK Server from an observed TLS
-handshake.   
+This document defines a mechanism which using a function called  pfs, to
+prevent an attacker to send a request to the LURK Server in such a way that the said attacker can obtain back the master secret for an 
+old handshake. In other words, the use of this function on the side of the LURK server helps prevent
+a forward-secrecy attack on an  old TLS session using its handshake-data observed by the adversary.
 
-The ServerHello.random of the TLS exchange is derived from the
+OPTION1:
+We require that the pfs function is a collision-resistant hash function (CHRF). 
+By CRHF, we mean a one-way hash function (OWHF) which also has collision resistance; the latter means that
+it is computationally infeasible to find any two inputs x1 and x2 such that pfs(x1) =pfs(x2).
+By one-way hash function (OWHF) we mean, as standard, a hash function pfs that  satisfies preimage resistance and
+2nd-preimage resistance. That is, given a hash value y, it is computationally infeasible to find an x
+such that pfs(x) = y, and respectively--  given a value x1 and its hash
+h (x1), it is computationally infeasible to find another x2 such that pfs(x2) = pfs(x1).
+
+For the concrete use of our pfs funtions, let S be a fresh.
+randomly picked value generated  by the LURK Server.
+The value of server_random in
+the TLS exchange is then equal to pfs(S), i.e., server_random=pfs(S).
+Between the LURK Client  and the LURK Server only server-random is exchanged.
+The LURK Server sends S to the Key Server, in the query.
+
+
+A man-in-the-middle attacker observing the (plaintext) TLS handshake between a LURK Client  and the LURK Server does not see S, but 
+only server-random.
+The preimage resistance guaranted by the pfs makes it such that this man-in-the-middle cannot retrieve S out of the observed server-random.
+As such, this man-in-the-middle attacker cannot query the  S corresponding to an (old) observed handshake to the Key Server.
+Moreover,  the collision resistance guaranteed by  the pfs makes it such that if  the aforementioned man-in-the-middle 
+cannot find S' such that pfs(S)=pfs(S').
+
+
+[](IB: I think we should go with Option1, just that CRHF are more expensive than PRFs)
+[](IB: see http://www.forth.gr/onassis/lectures/2010-06-28/presentations/The_cryptographic_hash_function_crisis_and_the_SHA_3_competition.pdf)
+
+OPTION2:
+We require that the pfs function is the instance of a pseudo random function (PRF), keyed on a key k  that the LURK server already
+shares with the Key server. I.e., server_random=pfs_k(S).
+
+The difference compared to Option1 is that if the man-in-the-middle (MiM) above does later corrupt the LURK server, then the MiM 
+can retrieve K, find the old S and query the Key server  on such an old S. 
+I.e., a man-in-the-middle who latter corrupt the LURK Server could break forward-secrecy  in the case of Option2. This cannot happen in the case of Option1.
+
+
+  
+The server_random MUST follow the structure of {{!RFC5246}} section
+7.4.1.2, which carries the gmt_unix_time in the first four bytes. 
+So, the ServerHello.random of the TLS exchange is derived from the
 server_random of the LURK exchange as defined below: 
 
 ~~~
@@ -265,8 +302,7 @@ ServerHello.random = pfs( server_random + "tls12 pfs" );
 ServerHello.random[0..3] = gmt_unix_time;
 ~~~
 
-The server_random MUST follow the structure of {{!RFC5246}} section
-7.4.1.2 which carry the gmt_unix_time in the first four bytes. 
+[](IB: if pfs is a hash, I would do ServerHello.random[0..3] = gmt_unix_time; ServerHello.random[4..x] =  pfs( server_random + "tls12 pfs";) 
 
 The operation MUST be performed by the LURK Server as well as the TLS
 Server, upon receiving the master secret or the signature of the
@@ -326,7 +362,9 @@ PFSAlgorithm, an "invalid_prf" error is returned.
 server_random when applicable as described in {{sec-pfs}}.
 
 4. The LURK Server decrypts the encrypted premaster secret as described
-in {{!RFC5246}} section 7.4.7.1.  When a PKCS1.5 format error is
+in {{!RFC5246}} section 7.4.7.1.  
+[](IB confused about the above)
+When a PKCS1.5 format error is
 detected, or a mismatch between the TLS versions provided as input and
 the one indicated in the encrypted premaster secret, the Key Server
 returns a randomly generated master secret.
