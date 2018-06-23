@@ -4,8 +4,9 @@
 
 LURK                                                          D. Migault
 Internet-Draft                                                  Ericsson
-Intended status: Standards Track                            May 26, 2018
-Expires: November 27, 2018
+Intended status: Standards Track                             I. Boureanu
+Expires: December 24, 2018                          University of Surrey
+                                                           June 22, 2018
 
 
          LURK Extension version 1 for (D)TLS 1.2 Authentication
@@ -32,7 +33,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on November 27, 2018.
+   This Internet-Draft will expire on December 24, 2018.
 
 Copyright Notice
 
@@ -52,10 +53,9 @@ Copyright Notice
 
 
 
-
-Migault                 Expires November 27, 2018               [Page 1]
+Migault & Boureanu      Expires December 24, 2018               [Page 1]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
 Table of Contents
@@ -65,53 +65,53 @@ Table of Contents
    3.  LURK Header . . . . . . . . . . . . . . . . . . . . . . . . .   4
    4.  rsa_master  . . . . . . . . . . . . . . . . . . . . . . . . .   6
      4.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .   6
-       4.1.1.  Perfect Forward Secrecy . . . . . . . . . . . . . . .   7
-     4.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .   7
-       4.2.1.  LURK Client Behavior  . . . . . . . . . . . . . . . .   7
-       4.2.2.  LURK Server Behavior  . . . . . . . . . . . . . . . .   8
-     4.3.  rsa_extended_master . . . . . . . . . . . . . . . . . . .   9
-       4.3.1.  Request Payload . . . . . . . . . . . . . . . . . . .   9
-     4.4.  Response Payload  . . . . . . . . . . . . . . . . . . . .   9
-     4.5.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .  10
-     4.6.  LURK Server Behavior  . . . . . . . . . . . . . . . . . .  10
-   5.  ecdhe"  . . . . . . . . . . . . . . . . . . . . . . . . . . .  10
-     5.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  10
-     5.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  11
-       5.2.1.  LURK Client Behavior  . . . . . . . . . . . . . . . .  12
-       5.2.2.  LURK Server Behavior  . . . . . . . . . . . . . . . .  12
-   6.  capabilities  . . . . . . . . . . . . . . . . . . . . . . . .  13
-     6.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  13
-     6.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  13
-       6.2.1.  LURK Client Behavior  . . . . . . . . . . . . . . . .  14
-       6.2.2.  LURK Server Behavior" . . . . . . . . . . . . . . . .  14
-   7.  ping  . . . . . . . . . . . . . . . . . . . . . . . . . . . .  14
+       4.1.1.  Perfect Forward Secrecy . . . . . . . . . . . . . . .   8
+     4.2.  Proof of TLS Handshake POH  . . . . . . . . . . . . . . .   9
+     4.3.  Response Payload  . . . . . . . . . . . . . . . . . . . .   9
+     4.4.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .   9
+     4.5.  LURK Server Behavior  . . . . . . . . . . . . . . . . . .   9
+   5.  rsa_extended_master . . . . . . . . . . . . . . . . . . . . .  11
+     5.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  11
+     5.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  12
+     5.3.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .  12
+     5.4.  LURK Server Behavior  . . . . . . . . . . . . . . . . . .  12
+   6.  ecdhe"  . . . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     6.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  12
+     6.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  14
+     6.3.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .  14
+     6.4.  LURK Server Behavior  . . . . . . . . . . . . . . . . . .  15
+   7.  capabilities  . . . . . . . . . . . . . . . . . . . . . . . .  15
      7.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  15
      7.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  15
-       7.2.1.  LURK Client Behavior  . . . . . . . . . . . . . . . .  15
-       7.2.2.  LURK Server Behavior  . . . . . . . . . . . . . . . .  15
-   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  15
-     8.1.  RSA . . . . . . . . . . . . . . . . . . . . . . . . . . .  16
-     8.2.  ECDHE . . . . . . . . . . . . . . . . . . . . . . . . . .  16
-   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  17
-   10. Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  18
-   11. Apendix . . . . . . . . . . . . . . . . . . . . . . . . . . .  18
-     11.1.  LURK Exchange for TLS RSA Extended Master Secret . . . .  20
-     11.2.  LURK Exchange for TLS ECDHE Signature  . . . . . . . . .  22
-   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  23
-     12.1.  Normative References . . . . . . . . . . . . . . . . . .  23
-     12.2.  Informative References . . . . . . . . . . . . . . . . .  23
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  24
+     7.3.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .  17
+     7.4.  LURK Server Behavior" . . . . . . . . . . . . . . . . . .  17
+   8.  ping  . . . . . . . . . . . . . . . . . . . . . . . . . . . .  17
+     8.1.  Request Payload . . . . . . . . . . . . . . . . . . . . .  17
+     8.2.  Response Payload  . . . . . . . . . . . . . . . . . . . .  17
+     8.3.  LURK Client Behavior  . . . . . . . . . . . . . . . . . .  17
+     8.4.  LURK Server Behavior  . . . . . . . . . . . . . . . . . .  18
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  18
+     9.1.  RSA . . . . . . . . . . . . . . . . . . . . . . . . . . .  18
+     9.2.  ECDHE . . . . . . . . . . . . . . . . . . . . . . . . . .  18
+     9.3.  Perfect Foward Secrecy  . . . . . . . . . . . . . . . . .  20
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  20
+   11. Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  21
+   12. Apendix . . . . . . . . . . . . . . . . . . . . . . . . . . .  22
+     12.1.  LURK Exchange for TLS RSA Extended Master Secret . . . .  23
+     12.2.  LURK Exchange for TLS ECDHE Signature  . . . . . . . . .  25
+   13. References  . . . . . . . . . . . . . . . . . . . . . . . . .  26
+     13.1.  Normative References . . . . . . . . . . . . . . . . . .  26
+     13.2.  Informative References . . . . . . . . . . . . . . . . .  26
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  27
 
 
 
 
 
 
-
-
-Migault                 Expires November 27, 2018               [Page 2]
+Migault & Boureanu      Expires December 24, 2018               [Page 2]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
 1.  Introduction
@@ -165,9 +165,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-Migault                 Expires November 27, 2018               [Page 3]
+Migault & Boureanu      Expires December 24, 2018               [Page 3]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    use of a stolen key or a rogue server.  Such delegation provides a
@@ -189,6 +189,12 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    suspicious node.  On the other hand the LURK Extension 'tls12'
    introduces some latency, and is not as scalable as STAR or delegated
    credential solutions.
+
+   <IB: a comparison should be made here>
+
+   <DM: I understand that the comparison shoudl be between lurk / star
+   and subcert.  I believe that was the intention of teh paragraph
+   above, so I might misunderstand the comment.>
 
    The LURK Extension 'tls12' is seen as a complementary to the STAR and
    "delegated credentials".  The LURK Extension 'tls12' is a back end
@@ -215,15 +221,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-
-
-
-
-
-
-Migault                 Expires November 27, 2018               [Page 4]
+Migault & Boureanu      Expires December 24, 2018               [Page 4]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    enum {
@@ -245,7 +245,8 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
        // code points for rsa authentication
        invalid_key_id_type (4), invalid_key_id (5),
        invalid_tls_random (6), invalid_prf (7),
-       invalid_encrypted_premaster (8)
+       invalid_encrypted_premaster (8), invalid_option (9),
+       invalid_finished (10)
 
        //code points for ecdhe authentication
        invalid_ec_type (9), invalid_ec_curve (10),
@@ -276,10 +277,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-
-Migault                 Expires November 27, 2018               [Page 5]
+Migault & Boureanu      Expires December 24, 2018               [Page 5]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
 4.  rsa_master
@@ -292,32 +292,63 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
    A rsa_master request payload has the following structure:
 
-   enum {
-       sha256_32 (0), (255)
-   }KeyPairIdType;
+enum {
+    sha256_32 (0), (255)
+}KeyPairIdType;
 
-   struct {
-       KeyPairIdType type;
-       opaque data; // length defined by the type
-   } KeyPairID;
+struct {
+    KeyPairIdType type;
+    opaque data; // length defined by the type
+} KeyPairID;
 
-   enum{
-       sha256_null (0), sha256_sha256 (1) (255)
-   } PRFAlgorithm
+enum{
+    sha256_null (0), sha256_sha256 (1) (255)
+} PRFAlgorithm
 
-   struct {
-       KeyPairID key_id;
-       Random client_random;        // see RFC5246 section 7.4.1.2
-       Random server_random;
-      PRFAlgorithm pfs;
-   } TLS12Base;
+enum {
+    null (0), finished (1) (255)
+} Options
 
-   struct {
-       TLS12Base base;
-       EncryptedPreMasterSecret  pre_master;
-                           // see RFC5246 section 7.4.7.1
-                           // Length depends on the key.
-   } TLS12RSAMasterRequestPayload;
+enum{
+    finished_client (0), extended_master (1) (255)
+} HandshakeMode
+
+struct {
+    HandshakeMode handshake_mode
+    select( handshake_mode ) {
+        case ( finished_client ):
+            opaque handshake_messages<2...2^16-2>
+                                        // see RFC5246 7.4.9
+        case ( extended_master ):
+            opaque handshake_messages<2...2^16-2>
+                                        // see RFC7627 4
+        }
+} HandshakeContext
+
+struct {
+    KeyPairID key_id;
+    PRFAlgorithm pfs;
+    Options option ;
+        select( option ) {
+
+
+
+Migault & Boureanu      Expires December 24, 2018               [Page 6]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+            case ( "null" ):
+                Random client_random;        // see RFC5246 section 7.4.1.2
+                Random server_random;
+                EncryptedPreMasterSecret  pre_master;
+                            // see RFC5246 section 7.4.7.1
+                            // Length depends on the key.
+            case ( "finished" ):
+                HandshakeContext handshake
+                Finished finished
+    }
+} TLS12RSAMasterRequestPayload;
 
    key_id  The identifier of the public key.  This document defines
       sha256_32 format which takes the 32 first bits of the hash of the
@@ -326,17 +357,14 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
       The binary representation of ECC keys is the subjectPublicKeyInfo
       structure defined in [RFC5480].
 
-   pfs  the one-way function used by LURK to implement Perfect Forward
-      Secrecy.
+   pfs  the one-way hash function (OWHF) used by LURK to implement
+      Perfect Forward Secrecy.
 
-
-
-
-
-Migault                 Expires November 27, 2018               [Page 6]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
+   option  indicates whether certain options are present.  In most of
+      the cases, the presence of options impact the structure of the
+      request as information carried across the option and main message
+      are factorized.  Possible options for rsa_master and
+      extended_Rsa_master are "null' and "finished".
 
    client_random  the random value associated to the TLS Client as
       defined in [RFC5246] Section 7.4.1.2.
@@ -347,32 +375,92 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    EncryptedPreMasterSecret : The encrypted master secret as defined in
    [RFC5246] Section 7.4.7.1.
 
+   handshake_mode  defines the purpose of the handshake. "finished
+      client" indicates the handshake includes the messages necessary to
+      performed a Finished message by the TLS Client as defined in
+      [RFC5246] section 7.4.9.  A mode set to "extended_master"
+      indicates the handshake message includes are those necessary to
+      generate a extended master secret as defined in [RFC7627] section
+      4.
+
+   handshake_messages  provides the handshake messages as defined by the
+      handshake_mode
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018               [Page 7]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+   finished  the Finished message as defined by {{!RFC5246} section
+      7.4.9.
+
 4.1.1.  Perfect Forward Secrecy
 
-   This document defines a mechanism based on a one way functions (pfs)
-   to prevent an attacker to send a request to the LURK Server to replay
-   an observed TLS handshake.  More explicitly, let R being a newly and
-   randomly generated server_random value.  The value of server_random
-   in the TLS exchange is pfs( R ), while the value used between the
-   LURK Client and the LURK Server is R.  The one way function
-   properties makes impossible to initiate a request to the LURK Server
-   from an observed TLS handshake.
+   This document defines a mechanism which uses a function called pfs,
+   to prevent an attacker to send a request to the LURK Server in such a
+   way that the said attacker can obtain back the master secret for an
+   old handshake.  In other words, the use of this function on the side
+   of the LURK Server helps prevent a forward-secrecy attack on an old
+   TLS session using its handshake-data observed by the adversary.
 
-   The ServerHello.random of the TLS exchange is derived from the
+   This document achieves PFS with pfs being a collision-resistant hash
+   function (CHRF).  By CRHF, we mean a one-way hash function (OWHF)
+   which also has collision resistance; the latter means that it is
+   computationally infeasible to find any two inputs x1 and x2 such that
+   pfs(x1) = pfs(x2).  By one-way hash function (OWHF) we mean, as
+   standard, a hash function pfs that satisfies preimage resistance and
+   2nd-preimage resistance.  That is, given a hash value y, it is
+   computationally infeasible to find an x such that pfs(x) = y, and
+   respectively- given a value x1 and its hash h (x1), it is
+   computationally infeasible to find another x2 such that pfs(x2) =
+   pfs(x1).
+
+   For the concrete use of our pfs funtions, let S be a fresh.  randomly
+   picked value generated by the LURK Server.  The value of
+   server_random in the TLS exchange is then equal to pfs(S), i.e.,
+   server_random=pfs(S).  Between the LURK Client and the LURK Server
+   only server-random is exchanged.  The LURK Server sends S to the Key
+   Server, in the query.
+
+   A man-in-the-middle attacker observing the (plaintext) TLS handshake
+   between a TLS Client and the TLS Server does not see S, but only
+   server_random.  The preimage resistance guaranted by the pfs makes it
+   such that this man-in-the-middle cannot retrieve S out of the
+   observed server-random.  As such, this man-in-the-middle attacker
+   cannot query the S corresponding to an (old) observed handshake to
+   the Key Server.  Moreover, the collision resistance guaranteed by the
+   pfs makes it such that if the aforementioned man-in-the-middle cannot
+   find S' such that pfs(S)=pfs(S').
+
+   As discussed in Section 9, PFS may be achieved in other ways, which
+   may be standardized in future version of the LURK extension "tls12.
+
+   The server_random MUST follow the structure of [RFC5246] section
+   7.4.1.2, which carries the gmt_unix_time in the first four bytes.
+   So, the ServerHello.random of the TLS exchange is derived from the
    server_random of the LURK exchange as defined below:
+
+
+
+Migault & Boureanu      Expires December 24, 2018               [Page 8]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
 
    gmt_unix_time = server_random[0..3];
    ServerHello.random = pfs( server_random + "tls12 pfs" );
    ServerHello.random[0..3] = gmt_unix_time;
 
-   The server_random MUST follow the structure of [RFC5246] section
-   7.4.1.2 which carry the gmt_unix_time in the first four bytes.
-
    The operation MUST be performed by the LURK Server as well as the TLS
    Server, upon receiving the master secret or the signature of the
    ecdhe_params from the LURK Client.
 
-4.2.  Response Payload
+4.2.  Proof of TLS Handshake POH
+
+4.3.  Response Payload
 
    The "rsa_master" response payload contains the master secret and has
    the following structure:
@@ -381,153 +469,210 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
        opaque master[0..47];
    } TLS12RSAMasterResponsePayload;
 
-4.2.1.  LURK Client Behavior
+4.4.  LURK Client Behavior
 
    A rsa_master request is sent so the LURK Server can derive the master
    secret used by the TLS session.  Upon receipt of the master_secret
-
-
-
-
-Migault                 Expires November 27, 2018               [Page 7]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
    the Edge Server can generate the session keys and finish the TLS key
    exchange protocol.
 
-4.2.2.  LURK Server Behavior
+   The Poof of TLS Hanshake (POH) helps the LURK Server to audit the
+   context associated to the query.  Typically it provides evidences
+   that the LURK exchange is not performed out of a TLS handshake.  The
+   LURK Client may include a Proof of TLS Handshake in which case it has
+   to set the option to "finished_client" and provide the LURK Server
+   the TLS Handshake and Finished message.
+
+   The LURK Client MUST ensure that the transmitted values for
+   server_random is S such as server_random = pfs( S ).  S MUST be
+   transmitted either as the server_random when option is set to "null"
+   or in the handshake when option is set to "finished_client".
+
+4.5.  LURK Server Behavior
 
    Upon receipt of a rsa_master request, the LURK Server proceeds
    according to the following steps:
 
-   1.  Checking TLS12Base:
-
-       *  a) The LURK Server checks the RSA key pair is available
-          (key_id).  If the format of the key pair identifier is not
-          understood, an "invalid_key_id_type" error is returned.  If
-          the designated key pair is not available an "invalid_key_id"
-          error is returned.
-
-       *  b) The LURK Server checks the length of the encrypted
-          premaster secret and returns an "invalid_payload_format" error
-          if the length differs from the length of binary representation
-          of the RSA modulus.
-
-       *  d) The LURK Server MUST check the format of the server_random
-          and more specifically checks the gmt_unix_time associated to
-          the random is acceptable.  Otherwise it SHOULD return an
-          "invalid_tls_random" error.  The value of the time window is
-          implementation dependent and SHOULD be a configurable
-          parameters.  The LURK Server MAY also check the client_random.
-          This should be considered cautiously as such check may prevent
-          TLS Clients to set a TLS session. client_random is generated
-          by the TLS Client whose clock might not be synchronized with
-          the one of the LURK Server or that might have a TLS
-          implementations that does not generate random based on
-          gmt_unix_time.
-
-   2.  The LURK Server checks the pfs.  If it does not support the
-       PFSAlgorithm, an "invalid_prf" error is returned.
-
-   3.  The LURK Server computes the necessary ServerHello.random from
-       the server_random when applicable as described in Section 4.1.1.
-
-   4.  The LURK Server decrypts the encrypted premaster secret as
-       described in [RFC5246] section 7.4.7.1.  When a PKCS1.5 format
-       error is detected, or a mismatch between the TLS versions
-       provided as input and the one indicated in the encrypted
-       premaster secret, the Key Server returns a randomly generated
-       master secret.
+   1.   The LURK Server checks the RSA key pair is available (key_id).
+        If the format of the key pair identifier is not understood, an
+        "invalid_key_id_type" error is returned.  If the designated key
+        pair is not available an "invalid_key_id" error is returned.
 
 
 
 
-
-Migault                 Expires November 27, 2018               [Page 8]
+Migault & Boureanu      Expires December 24, 2018               [Page 9]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
-   5.  If the pre master is appropriately decrypted, then the master
-       secret is computed as described in [RFC5246] section 8.1 using
-       the client_random, and the server_random provided by the LURK
-       Client.
+   2.   The LURK Server checks the pfs.  If it does not support the
+        PFSAlgorithm, an "invalid_prf" error is returned.
 
-   6.  The LURK Server returns a master secret in a
-       TLS12RSAMasterResponsePayload.
+   3.   The LURK Server checks the option.  If option is not set to
+        "null" or "finished" an "invalid_option" error is returned.
 
-   7.  Error are expected to provide the LURK Client an indication of
-       the cause that resulted in the error.  When an error occurs the
-       LURK Server MAY ignore the request, or provide more generic error
-       codes such as "undefined_error" or "invalid_format".
+   4.   The LURK Server collects the client_random, server_random and
+        pre_master parameters either provided explicitly when the option
+        is set to "null" or provided via the handshake when option is
+        set to "finished".
 
-4.3.  rsa_extended_master
+   5.   The LURK Server MUST check the format of the server_random and
+        more specifically checks the gmt_unix_time associated to the
+        random is acceptable.  Otherwise it SHOULD return an
+        "invalid_tls_random" error.  The value of the time window is
+        implementation dependent and SHOULD be a configurable
+        parameters.  The LURK Server MAY also check the client_random.
+        This should be considered cautiously as such check may prevent
+        TLS Clients to set a TLS session. client_random is generated by
+        the TLS Client whose clock might not be synchronized with the
+        one of the LURK Server or that might have a TLS implementations
+        that does not generate random based on gmt_unix_time.
+
+   6.   The LURK Server computes the necessary ServerHello.random from
+        the server_random when applicable as described in Section 4.1.1.
+        When option is set to "finished" the ServerHello.random in the
+        handshake is replaced by its new value.
+
+   7.   The LURK Server checks the length of the encrypted premaster
+        secret and returns an "invalid_payload_format" error if the
+        length differs from the length of binary representation of the
+        RSA modulus.
+
+   8.   The LURK Server decrypts the encrypted premaster secret as
+        described in [RFC5246] section 7.4.7.1.
+        When a PKCS1.5 format error is detected, or a mismatch between
+        the TLS versions provided as input and the one indicated in the
+        encrypted premaster secret, the Key Server returns a randomly
+        generated master secret.
+
+   9.   The LURK Server generates the master secret as described in
+        [RFC5246] section 8.1 using the client_random, and the
+        server_random provided by the LURK Client.
+
+   10.  When the option is set to "finished" the Finished message is
+        checked as defined in [RFC5246] section 7.4.9.  In case of
+        mismatch returns an "invalid_finished" error.
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 10]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+   11.  The LURK Server returns a master secret in a
+        TLS12RSAMasterResponsePayload.
+
+   12.  Error are expected to provide the LURK Client an indication of
+        the cause that resulted in the error.  When an error occurs the
+        LURK Server MAY ignore the request, or provide more generic
+        error codes such as "undefined_error" or "invalid_format".
+
+5.  rsa_extended_master
 
    A exchange of type "rsa_extended_master" enables the LURK Client to
    delegate the RSA Key Exchange and authentication.  The LURK Server
    returns the extended master secret as defined in [RFC7627].
 
-4.3.1.  Request Payload
+5.1.  Request Payload
 
    The "rsa_extended_master" payload request has the following
    structure:
 
-   struct{
+   enum { null(0), sha256_128(1), sha256_256(2),
+   (255) }POOPRF
+   enum{
+       server (0), client (1) (255)
+   } FinishedLabel
+
+   struct {
+       FinishLabel finish_label
+       opaque handshake_messages<2...2^16-2>
+       Finished finished     // see RFC5246 7.4.9
+   } FinishedParam
+
+
+   struct {
        KeyPairID key_id
+       PRFAlgorithm pfs;
        PRFAlgorithm prf              // see RFC5246 section 6.1
-       opaque session_hash<2...2^16-2>
-       EncryptedPreMasterSecret  pre_master
-                                     // see RFC5246 section 7.4.7.1
+       HandshakeContext handshake
+       Options option ;
+           select( option ) {
+               case ( "null" ):
+               case ( "finished" ):
+                   Finished finished
+       }
    }TLS12ExtendedMasterRSARequestPayload;
 
-   key_id, pfs, pre_master  are defined in Section 4.1.
+   key_id, pfs, option, handshake, finished  are defined in Section 4.1.
 
-   session_hash  The hash of the TLS handshake session as described in
-      [RFC7627] section 3.
 
-   Note that as the server_random is not provided by the LURK Client,
-   PFS mechanisms does not apply here.
 
-4.4.  Response Payload
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 11]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+5.2.  Response Payload
 
    rsa_extended_master response payload has a similar structure as the
-   rsa_master response payload Section 4.2.
+   rsa_master response payload Section 4.3.
 
+5.3.  LURK Client Behavior
 
+   The LURK Client proceeds as described in {{sec-rsa-master-clt}. The
+   ain difference is that the necessary element to generate the master
+   secret are included in the handshake and or not provided separately.
 
+5.4.  LURK Server Behavior
 
-
-
-
-Migault                 Expires November 27, 2018               [Page 9]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
-4.5.  LURK Client Behavior
-
-   A rsa_extended_master request is sent so the LURK Server can derive
-   the master secret used by the TLS session.  Upon receipt of the
-   master_secret the Edge Server can generate the session keys and
-   finish the TLS key exchange protocol.
-
-4.6.  LURK Server Behavior
-
-   The LURK Server proceeds as described in Section 4.2.2 except that
-   the generation of the extended master is processed as described in
+   The LURK Server proceeds as described in Section 4.5 except that the
+   generation of the extended master is processed as described in
    [RFC7627].
 
-5.  ecdhe"
+6.  ecdhe"
 
    A exchange of type "ecdhe" enables the LURK Client to delegate the
    ECDHE_RSA [RFC5246] or the ECDHE_ECDSA [I-D.ietf-tls-rfc4492bis]
    authentication.
 
-5.1.  Request Payload
+6.1.  Request Payload
 
    The "ecdhe" request payload has the following structure:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 12]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
 
 enum { null(0), sha256_128(1), sha256_256(2),
 (255) }POOPRF
@@ -543,25 +688,20 @@ struct {
 } TLS12POOParams;
 
 struct {
-    TLS12Base base;
+    KeyPairID key_id;
+    PRFAlgorithm pfs;
+    Random client_random;        // see RFC5246 section 7.4.1.2
+    Random server_random;
     SignatureAndHashAlgorithm sig_and_hash  //RFC 5246 section 4.7
     ServerECDHParams ecdhe_params;  // I-D.ietf-tls-rfc4492bis section 5.4
     POOParams poo_params;
 } TLS12ECDHERequestPayload;
 
-   base  is defined in Section 4.1.
+   key_id, pfs, client_random, server_random  is defined in Section 4.1.
 
    ecdhe_params  contains as defined in [I-D.ietf-tls-rfc4492bis]
       section 5.4, the elliptic curve domain parameters associated with
       the ECDH public key (defined by the ECParameters structure) and
-
-
-
-Migault                 Expires November 27, 2018              [Page 10]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
       the ephemeral ECDH public key (defined by the ECPoint structure).
       The public key is also noted in this document bG with b is a
       random secret generated by the LURK Client and G the base point of
@@ -581,6 +721,15 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    rG, tG  are necessary points to generate the proof of ownership. r is
       a random number chosen by the LURK Client.  G is the the base
       point of the curve. t = cb + r, with c a number that is not under
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 13]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
       the control of the LURK Client generated as the output of poo_prf
       and b the random secret of the private key.
 
@@ -604,19 +753,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    bit length) for a 128 (resp 256) bit security level.  Given b, we
    RECOMMEND r and c to be at least half the size of b.
 
-5.2.  Response Payload
+6.2.  Response Payload
 
    The "ecdhe" response payload has the following structure:
-
-
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 11]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
 
    struct {
        Signature signed_params;  // I-D.ietf-tls-rfc4492bis section 5.4
@@ -626,20 +765,34 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
       well as client_random and server_random as described in
       [I-D.ietf-tls-rfc4492bis] section 5.4.
 
-5.2.1.  LURK Client Behavior
+6.3.  LURK Client Behavior
 
    The LURK Client builds the base as described in Section 4.1.  The
-   LURK Client computes c, t, rG and tG as described in Section 5.1.
+   LURK Client computes c, t, rG and tG as described in Section 6.1.
 
    Upon receiving the response payload, the LURK Client MAY check the
    signature.  If the signature does not match an error SHOULD be
    reported.
 
-5.2.2.  LURK Server Behavior
+
+
+
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 14]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+6.4.  LURK Server Behavior
 
    Upon receiving an ecdhe request, the LURK Server proceeds as follows:
 
-   1.  The LURK Server performs some format check of the ecdhe_params
+   1.  perform steps 1 - 6 as described in Section 4.5
+
+   2.  The LURK Server performs some format check of the ecdhe_params
        before signing them.  If the ecdhe_params does not follow the
        expected structure.  With the notations from
        [I-D.ietf-tls-rfc4492bis], if curve_type is not set to
@@ -648,51 +801,51 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
        supported the LURK Server SHOULD be able to respond with an
        "invalid_ec_curve" error.
 
-   2.  The LURK Server processes the poo_params.  If the poo_prf is not
+   3.  The LURK Server processes the poo_params.  If the poo_prf is not
        supported, the LURK Extension returns a "invalid_poo_prf" status.
        If poo_prf is supported and different from "null", the LURK
        Server proceeds to the proof of ownership as described in
-       Section 5.1.  If the proof is not properly verified, the LURK
+       Section 6.1.  If the proof is not properly verified, the LURK
        Extension returns a "invalid_poo" status.
 
-   3.  The LURK Server processes the base structure as described in
-       Section 4.2.2
+   4.  The LURK Server processes the base structure as described in
+       Section 4.5
 
-   4.  The LURK Server generates the siged_params.
+   5.  The LURK Server generates the signed_params.
 
    Error are expected to provide the LURK Client an indication of the
    cause that resulted in the error.  When an error occurs the LURK
    Server MAY ignore the request, or provide more generic error codes
    such as "undefined_error" or "invalid_format".
 
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 12]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
-6.  capabilities
+7.  capabilities
 
    A exchange of type "capabilities" enables the LURK Client to be
    informed of the supported operations performed by the LURK Server.
    The supported parameters are provided on a per type basis.
 
-6.1.  Request Payload
+7.1.  Request Payload
 
    A LURK "capabilities" request has no payload.
 
-6.2.  Response Payload
+7.2.  Response Payload
 
    The "capabilities" response payload lists for each supported type,
    the supported certificates, the supported signatures and hash
    associated.  The "capabilities" payload has the following structure:
 
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 15]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
    struct {
         KeyPairID key_id_type_list<0..255>;
         PFSAlgorithmList pfs_list<0..255>
+        OptionList option_list<0..255>
         Certificate certificate_list
    } TLS12RSACapability;
 
@@ -722,14 +875,6 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
        opaque state<32>;
    } TLS12CapabilitiesResponsePayload;
 
-
-
-
-Migault                 Expires November 27, 2018              [Page 13]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
    key_id_type_list  the supported key_id_type.
 
    pfs_list  designates the list of pfs ( see Section 4.1).
@@ -746,9 +891,16 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
    ecdsa_curves_list  the supported signatures
 
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 16]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
    ecdhe_curves_list  the supported curves for ECHDE parameters.
 
-   poo_prf_list  the supported message type poo_prf ( see Section 5.1.
+   poo_prf_list  the supported message type poo_prf ( see Section 6.1.
       to be used with the proof of ownership.
 
    type_list  the supported message type of the LURK extension.
@@ -756,7 +908,7 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    state  characterizes the configuration associated to 'tls12' on the
       LURK Server..
 
-6.2.1.  LURK Client Behavior
+7.3.  LURK Client Behavior
 
    The LURK Client performs a capability request in order to determine
    the possible operations.
@@ -765,90 +917,73 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    detect a change in the LURK Server configuration when an error
    occurs.
 
-6.2.2.  LURK Server Behavior"
+7.4.  LURK Server Behavior"
 
    Upon receiving a capabilities request, the LURK Extension MUST return
    the capabilities payload associated to a "success" status to the LURK
    Server.  These information are then forwarded by the LURK Server to
    the LURK Client.
 
-7.  ping
+8.  ping
 
    A exchange of type "ping" enables the LURK Client to check the
    reachability in a context of the defined LURK Extension.
 
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 14]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
-7.1.  Request Payload
+8.1.  Request Payload
 
    A "ping" request has no payload.
 
-7.2.  Response Payload
+8.2.  Response Payload
 
    A "ping" response has no payload.
 
-7.2.1.  LURK Client Behavior
+8.3.  LURK Client Behavior
 
    The LURK Client sends a "ping" request to test the reachability of
    the LURK Server.  The reachability is performed for the tls12 LURK
    Extension.
 
-7.2.2.  LURK Server Behavior
+
+
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 17]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+8.4.  LURK Server Behavior
 
    Upon receiving a ping request, the LURK Extension MUST return the
    ping response associated with a "success" status to the LURK Server.
    These information are then forwarded by the LURK Server to the LURK
    Client.
 
-8.  Security Considerations
+9.  Security Considerations
 
    The security considerations defined in [I-D.mglt-lurk-lurk] applies
    to the LURK Extension "tls12" defined in this document.
 
+   Anti-replay mechanisms rely on the channel between the LURK Client
+   and the LURK Server.  With RSA authentication master secret are
+   transmitted from the LURK Server to the LURK Client.  As such the
+   channel between the LURK Client and the LURK Server MUST be private.
+   More specifically, it MUST be encrypted with perfect forward secrecy.
+
    The LURK Extension "tls12" is expected to have response smaller that
    the request or at least not significantly larger, which makes "tls12"
-   relatively robust to amplification attacks.
+   relatively robust to amplification attacks.  This is especially
+   matters when LURK is using UDP.  The use of an authenticated channel
+   reduces also the risk of amplification attacks even when UDP is being
+   used.
 
-   The LURK Extension "tls12" performs cryptographic operations that may
-   lead to resource exhaustion, as such it is RECOMMENDED the LURK
-   Server authenticates the LURK Clients.  In addition, this prevents
-   when UDP is used the LURK Server to be used as a reflector.
+   The LURK Client and the LURK Server use time in their way to generate
+   the server_random.  Care MUST be taken so the LURK Client and LURK
+   Server remain synchronized.
 
-   The rsa_master and ecdhe exchange provides a mechanism to provide
-   Perfect Forward Secrecy.
-
-   The rsa_extended_master does not provide PFS mechanism as a digest of
-   the TLS Key Exchange is provided which prevent the LURK Server to
-   perform an agreed operation on the HelloServer.random.
-
-   rsa_master and ecdhe request provides client_random.  In order to
-   limit the replay of a random value it RECOMMENDED the Server control
-   the time at which the random has been generated.  The time control
-   should also consider desynchronization between the TLS Client and the
-   LURK Server.
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 15]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
-8.1.  RSA
-
-   The rsa_master and rsa_extended_master exchange carry the master
-   secret.  These pieces of information enable a passive attacker to
-   hijack the session and as such it is RECOMMENDED the LURK Server and
-   the LURK Client use an encrypted channel when the authentication RSA
-   is used.
+9.1.  RSA
 
    The rsa_master and rsa_extended_master returns the master_secret
    instead of the premaster.  The additional hashing operation necessary
@@ -856,23 +991,26 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    of the RSA private key against cryptographic analysis based on the
    observation of a set of clear text and corresponding encrypted text.
 
-   Note that having the Key Server generating the server random on its
-   own without any input from the Edge Server would also achieve the PFS
-   in a similar way as standard TLS does.  The pfs options achieves
-   similar properties while enabling a LURK Client to replay a request.
-
    The standard TLS1.2 is robust against Bleichenbacher attack as it
    provides no means to detect if the error comes from a TLS version
    mismatch or from the premaster format.  This properties remain with
    LURK, and so LURK does not present vulnerabilities toward
    Bleichenbacher attack, and cannot be used as a decryption oracle.
 
-8.2.  ECDHE
+9.2.  ECDHE
 
    A passive attacker observing the ecdhe exchange may collect a
    sufficient amount of clear text and corresponding signature to
    perform a cryptographic analysis or to reuse the signature for other
-   purposes.  As a result, it is RECOMMENDED to encrypt the ecdhe
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 18]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+   purposes.  As a result, it remains important to encrypt the ecdhe
    exchange between the LURK Client and the LURK Server.  Note that this
    vulnerability is present in TLS 1.2 as a TLS Client can accumulate
    these data as well.  The difference with LURK is by listening the
@@ -885,19 +1023,11 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
                             ServerKeyExchange.params);
 
    More specifically, the ECDHE_RSA and ECDHE_DSA mechanisms does not
-   associate the signature to a TLS1.2 context.  As a result, the
-   signature could be re-used in another context.
+   associate the signature to a TLS1.2 context.  As a result, an
+   attacker could re-used the signature in another context.
 
    The attack may operate by collecting a large collection of clear text
    and their corresponding signature.  When the attacker want to provide
-
-
-
-Migault                 Expires November 27, 2018              [Page 16]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
    a signature, it checks in its database, a match occurs between the
    two contents to be signed.  The probability of a collision increases
    with number of available hashes.  The attack is related the pre-image
@@ -924,7 +1054,48 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    o  limiting the usage of a Cryptographic material to a single usage,
       in our case serving TLS 1.2.
 
-9.  IANA Considerations
+
+
+
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 19]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+9.3.  Perfect Foward Secrecy
+
+   This document uses sha256 as pfs, a collision resistant hash function
+   (CRHF) in order to implement PFS Section 4.1.1.  In addition, the PFS
+   properties is performed through the server_random of 32 byte fix
+   length.  By construction of the server_random, only the last
+   remaining 28 bytes will carry the CRHF output, that is 28 bytes.  The
+   PFS property remains as long as pfs can be considered as a CRHF and
+   that the 28 bytes of randomness carried by the server_random are
+   sufficient.  If the 28 bytes are not considered are sufficient, the
+   mechanism described in this document will not be considered as safe.
+
+   PFS can also be implemented using other mechanisms not based on CRHF.
+   For example, a pfs function that is an instance of a pseudo random
+   function (PRF), keyed on a key k that the LURK Server already shares
+   with the LURK Client.  I.e., server_random=pfs_k(S).
+
+   The difference compared to the mechanism based on CRHF is that if the
+   man-in-the-middle (MiM) above does later corrupt the LURK Client (on
+   an Edge Server), then the MiM can retrieve K, find the old S and
+   query the Key server on such an old S.  I.e., a man-in-the-middle who
+   latter corrupt the LURK Client could break forward-secrecy.  This
+   cannot happen with the CRHF mechanism.  One way to lower the risks
+   may consists in using keys with a short life time.
+
+   <IB: see http://www.forth.gr/onassis/lectures/2010-06-
+   28/presentations/
+   The_cryptographic_hash_function_crisis_and_the_SHA_3_competition.pdf>
+
+10.  IANA Considerations
 
    The requested information is defined in [I-D.mglt-lurk-lurk].
 
@@ -946,12 +1117,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-
-
-
-Migault                 Expires November 27, 2018              [Page 17]
+Migault & Boureanu      Expires December 24, 2018              [Page 20]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    LURK tls12 Extension Status
@@ -966,11 +1134,13 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    6        invalid_tls_random          [RFC-TBD]
    7        invalid_prf                 [RFC-TBD]
    8        invalid_encrypted_premaster [RFC-TBD]
-   9        invalid_ec_type             [RFC-TBD]
-   10       invalid_ec_curve            [RFC-TBD]
-   11       invalid_poo_prf             [RFC-TBD]
-   12       invalid_poo                 [RFC-TBD]
-   13 - 255 UNASSIGNED
+   9        invalid_option              [RFC-TBD]
+   10       invalid_finished            [RFC-TBD]
+   11       invalid_ec_type             [RFC-TBD]
+   12       invalid_ec_curve            [RFC-TBD]
+   13       invalid_poo_prf             [RFC-TBD]
+   14       invalid_poo                 [RFC-TBD]
+   15 - 255 UNASSIGNED
 
    LURK tls12 Extension Type
 
@@ -983,7 +1153,7 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    4        ecdhe               [RFC-TBD]
    16 - 255 UNASSIGNED
 
-10.  Acknowledgments
+11.  Acknowledgments
 
    We would like to thank for their very useful feed backs: Yaron
    Sheffer, Yoav Nir, Stephen Farrell, Eric Burger, Thomas Fossati, Eric
@@ -996,19 +1166,23 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    Sheffer, Richard Brunner, Stephane Dault, Dan Kahn Gillmor, Joe
    Hildebrand, Kelsey Cairns.
 
-11.  Apendix
+
+
+
+
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 21]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
+12.  Apendix
 
    ## LURK Exchange for TLS RSA Master Secret
 
    TLS Client          Edge Server         Key Server
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 18]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
 
    ClientHello
       server_version
@@ -1052,25 +1226,25 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
                                     client_random +\
                                     server_random)[0..47];
 
+
+
+
+Migault & Boureanu      Expires December 24, 2018              [Page 22]
+
+Internet-Draft                LURK/TLS 1.2                     June 2018
+
+
                                            TLS12 Response Header
                                            TLS12MasterResponsePayload
                                                master
                                            <--------
 
                        [ChangeCipherSpec]
-
-
-
-Migault                 Expires November 27, 2018              [Page 19]
-
-Internet-Draft                LURK/TLS 1.2                      May 2018
-
-
                            Finished
                        <--------
    Application Data      <------->     Application Data
 
-11.1.  LURK Exchange for TLS RSA Extended Master Secret
+12.1.  LURK Exchange for TLS RSA Extended Master Secret
 
 
 
@@ -1111,15 +1285,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-
-
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 20]
+Migault & Boureanu      Expires December 24, 2018              [Page 23]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    TLS Client          Edge Server         Key Server
@@ -1173,12 +1341,12 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-Migault                 Expires November 27, 2018              [Page 21]
+Migault & Boureanu      Expires December 24, 2018              [Page 24]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
-11.2.  LURK Exchange for TLS ECDHE Signature
+12.2.  LURK Exchange for TLS ECDHE Signature
 
    TLS Client          Edge Server         Key Server
 
@@ -1229,9 +1397,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-Migault                 Expires November 27, 2018              [Page 22]
+Migault & Boureanu      Expires December 24, 2018              [Page 25]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    Finished
@@ -1241,9 +1409,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
                        <--------
    Application Data      <------->     Application Data
 
-12.  References
+13.  References
 
-12.1.  Normative References
+13.1.  Normative References
 
    [I-D.ietf-tls-rfc4492bis]
               Nir, Y., Josefsson, S., and M. Pegourie-Gonnard, "Elliptic
@@ -1276,7 +1444,7 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
               RFC 8017, DOI 10.17487/RFC8017, November 2016,
               <https://www.rfc-editor.org/info/rfc8017>.
 
-12.2.  Informative References
+13.2.  Informative References
 
    [I-D.erb-lurk-rsalg]
               Erb, S. and R. Salz, "A PFS-preserving protocol for LURK",
@@ -1285,9 +1453,9 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-Migault                 Expires November 27, 2018              [Page 23]
+Migault & Boureanu      Expires December 24, 2018              [Page 26]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    [I-D.fieau-cdni-https-delegation]
@@ -1333,7 +1501,7 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
               Automatically-Renewed (STAR) Certificates", draft-sheffer-
               acme-star-request-01 (work in progress), June 2017.
 
-Author's Address
+Authors' Addresses
 
 
 
@@ -1341,9 +1509,9 @@ Author's Address
 
 
 
-Migault                 Expires November 27, 2018              [Page 24]
+Migault & Boureanu      Expires December 24, 2018              [Page 27]
 
-Internet-Draft                LURK/TLS 1.2                      May 2018
+Internet-Draft                LURK/TLS 1.2                     June 2018
 
 
    Daniel Migault
@@ -1355,6 +1523,11 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
    EMail: daniel.migault@ericsson.com
 
 
+   Ioana Boureanu
+   University of Surrey
+   UK
+
+   EMail: i.boureanu@surrey.ac.uk
 
 
 
@@ -1392,9 +1565,4 @@ Internet-Draft                LURK/TLS 1.2                      May 2018
 
 
 
-
-
-
-
-
-Migault                 Expires November 27, 2018              [Page 25]
+Migault & Boureanu      Expires December 24, 2018              [Page 28]

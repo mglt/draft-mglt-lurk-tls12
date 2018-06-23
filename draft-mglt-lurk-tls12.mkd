@@ -31,6 +31,18 @@ author:
         code: 4S 0B6
         country: Canada
         email: daniel.migault@ericsson.com
+      -
+        ins: I. Boureanu
+        name: Ioana Boureanu
+        org: University of Surrey
+        street: 
+        -
+        city: 
+        -
+        code: 
+        -
+        country: UK
+        email: i.boureanu@surrey.ac.uk
 
 
 --- abstract
@@ -62,7 +74,7 @@ A more detailed description of some use cases foreseen in a TLS context
 can be found in {{?I-D.mglt-lurk-tls-use-cases}}.
 
 HTTPS delegation has been the main concern of the Content Delivery
-Networks Interconnection (cdni) Working Group and  several mechanisms
+Networks Interconnection (cdni) Working Group and several mechanisms
 have been designed to delegate the load from an upstream entity to a
 downstream entity. Entities can be of different nature and may
 designated differently according to the context. Typically designations
@@ -111,6 +123,11 @@ not as scalable as STAR or delegated credential solutions.
 
 [](IB: a comparison should be made here)
 
+[](DM: I understand that the comparison shoudl be between lurk / star
+and subcert. I believe that was the intention of teh paragraph above, so
+I might misunderstand the comment.)
+
+
 The LURK Extension 'tls12' is seen as a complementary to the STAR and
 "delegated credentials". The LURK Extension 'tls12' is a back end
 solution that does not require any modifications from TLS Client or the
@@ -153,7 +170,8 @@ enum {
     // code points for rsa authentication
     invalid_key_id_type (4), invalid_key_id (5),
     invalid_tls_random (6), invalid_prf (7),
-    invalid_encrypted_premaster (8) 
+    invalid_encrypted_premaster (8), invalid_option (9), 
+    invalid_finished (10)
 
     //code points for ecdhe authentication
     invalid_ec_type (9), invalid_ec_curve (10), 
@@ -207,18 +225,41 @@ enum{
     sha256_null (0), sha256_sha256 (1) (255)
 } PRFAlgorithm
 
-struct {
-    KeyPairID key_id;
-    Random client_random;        // see RFC5246 section 7.4.1.2
-    Random server_random;    
-   PRFAlgorithm pfs; 
-} TLS12Base;
+enum {
+    null (0), finished (1) (255)
+} Options
+
+enum{
+    finished_client (0), extended_master (1) (255)
+} HandshakeMode
 
 struct {
-    TLS12Base base;
-    EncryptedPreMasterSecret  pre_master; 
-                        // see RFC5246 section 7.4.7.1 
-                        // Length depends on the key.
+    HandshakeMode handshake_mode
+    select( handshake_mode ) {
+        case ( finished_client ):
+            opaque handshake_messages<2...2^16-2>  
+                                        // see RFC5246 7.4.9
+        case ( extended_master ):
+            opaque handshake_messages<2...2^16-2>  
+                                        // see RFC7627 4
+        }
+} HandshakeContext
+
+struct {
+    KeyPairID key_id;
+    PRFAlgorithm pfs; 
+    Options option ; 
+        select( option ) {
+            case ( "null" ):
+                Random client_random;        // see RFC5246 section 7.4.1.2
+                Random server_random;    
+                EncryptedPreMasterSecret  pre_master; 
+                            // see RFC5246 section 7.4.7.1 
+                            // Length depends on the key.
+            case ( "finished" ):
+                HandshakeContext handshake
+                Finished finished
+    }
 } TLS12RSAMasterRequestPayload;
 ~~~
 
@@ -234,6 +275,13 @@ pfs
 : the one-way hash function (OWHF) used by LURK to implement Perfect Forward
 Secrecy.
 
+option
+: indicates whether certain options are present. In most of the cases,
+the presence of options impact the structure of the request as
+information carried across the option and main message are factorized.
+Possible options for rsa_master and extended_Rsa_master are "null' and
+"finished". 
+
 client_random 
 : the random value associated to the TLS Client as defined in {{!RFC5246}}
 Section 7.4.1.2.  
@@ -245,52 +293,60 @@ in {{!RFC5246}} Section 7.4.1.2.
 EncryptedPreMasterSecret : The encrypted master secret as defined in
 {{!RFC5246}} Section 7.4.7.1. 
 
+handshake_mode
+: defines the purpose of the handshake. "finished client" indicates the
+handshake includes the messages necessary to performed a Finished
+message by the TLS Client as defined in {{!RFC5246}} section 7.4.9. A
+mode set to "extended_master" indicates the handshake message includes
+are those necessary to generate a extended master secret as defined in
+{{!RFC7627}} section 4.  
+
+handshake_messages
+: provides the handshake messages as defined by the handshake_mode 
+
+finished
+: the Finished message as defined by {{!RFC5246} section 7.4.9.
 
 ### Perfect Forward Secrecy {#sec-pfs}
 
-This document defines a mechanism which using a function called  pfs, to
-prevent an attacker to send a request to the LURK Server in such a way that the said attacker can obtain back the master secret for an 
-old handshake. In other words, the use of this function on the side of the LURK server helps prevent
-a forward-secrecy attack on an  old TLS session using its handshake-data observed by the adversary.
+This document defines a mechanism which uses a function called  pfs, to
+prevent an attacker to send a request to the LURK Server in such a way
+that the said attacker can obtain back the master secret for an old
+handshake. In other words, the use of this function on the side of the
+LURK Server helps prevent a forward-secrecy attack on an old TLS
+session using its handshake-data observed by the adversary.
 
-OPTION1:
-We require that the pfs function is a collision-resistant hash function (CHRF). 
-By CRHF, we mean a one-way hash function (OWHF) which also has collision resistance; the latter means that
-it is computationally infeasible to find any two inputs x1 and x2 such that pfs(x1) =pfs(x2).
-By one-way hash function (OWHF) we mean, as standard, a hash function pfs that  satisfies preimage resistance and
-2nd-preimage resistance. That is, given a hash value y, it is computationally infeasible to find an x
-such that pfs(x) = y, and respectively--  given a value x1 and its hash
-h (x1), it is computationally infeasible to find another x2 such that pfs(x2) = pfs(x1).
+This document achieves PFS  with pfs being a collision-resistant hash
+function (CHRF).  By CRHF, we mean a one-way hash function (OWHF) which
+also has collision resistance; the latter means that it is
+computationally infeasible to find any two inputs x1 and x2 such that
+pfs(x1) = pfs(x2).  By one-way hash function (OWHF) we mean, as
+standard, a hash function pfs that  satisfies preimage resistance and
+2nd-preimage resistance.  That is, given a hash value y, it is
+computationally infeasible to find an x such that pfs(x) = y, and
+respectively--  given a value x1 and its hash h (x1), it is
+computationally infeasible to find another x2 such that pfs(x2) =
+pfs(x1).
 
-For the concrete use of our pfs funtions, let S be a fresh.
-randomly picked value generated  by the LURK Server.
-The value of server_random in
-the TLS exchange is then equal to pfs(S), i.e., server_random=pfs(S).
-Between the LURK Client  and the LURK Server only server-random is exchanged.
-The LURK Server sends S to the Key Server, in the query.
+For the concrete use of our pfs funtions, let S be a fresh.  randomly
+picked value generated  by the LURK Server.  The value of server_random
+in the TLS exchange is then equal to pfs(S), i.e., server_random=pfs(S).
+Between the LURK Client  and the LURK Server only server-random is
+exchanged.  The LURK Server sends S to the Key Server, in the query.
 
+A man-in-the-middle attacker observing the (plaintext) TLS handshake
+between a TLS Client and the TLS Server does not see S, but only
+server_random.  The preimage resistance guaranted by the pfs makes it
+such that this man-in-the-middle cannot retrieve S out of the observed
+server-random.  As such, this man-in-the-middle attacker cannot query
+the S corresponding to an (old) observed handshake to the Key Server.
+Moreover,  the collision resistance guaranteed by  the pfs makes it such
+that if  the aforementioned man-in-the-middle cannot find S' such that
+pfs(S)=pfs(S').
 
-A man-in-the-middle attacker observing the (plaintext) TLS handshake between a LURK Client  and the LURK Server does not see S, but 
-only server-random.
-The preimage resistance guaranted by the pfs makes it such that this man-in-the-middle cannot retrieve S out of the observed server-random.
-As such, this man-in-the-middle attacker cannot query the  S corresponding to an (old) observed handshake to the Key Server.
-Moreover,  the collision resistance guaranteed by  the pfs makes it such that if  the aforementioned man-in-the-middle 
-cannot find S' such that pfs(S)=pfs(S').
+As discussed in {{sec-sec}}, PFS may be achieved in other ways, which
+may be standardized in future version of the LURK extension "tls12.
 
-
-[](IB: I think we should go with Option1, just that CRHF are more expensive than PRFs)
-[](IB: see http://www.forth.gr/onassis/lectures/2010-06-28/presentations/The_cryptographic_hash_function_crisis_and_the_SHA_3_competition.pdf)
-
-OPTION2:
-We require that the pfs function is the instance of a pseudo random function (PRF), keyed on a key k  that the LURK server already
-shares with the Key server. I.e., server_random=pfs_k(S).
-
-The difference compared to Option1 is that if the man-in-the-middle (MiM) above does later corrupt the LURK server, then the MiM 
-can retrieve K, find the old S and query the Key server  on such an old S. 
-I.e., a man-in-the-middle who latter corrupt the LURK Server could break forward-secrecy  in the case of Option2. This cannot happen in the case of Option1.
-
-
-  
 The server_random MUST follow the structure of {{!RFC5246}} section
 7.4.1.2, which carries the gmt_unix_time in the first four bytes. 
 So, the ServerHello.random of the TLS exchange is derived from the
@@ -302,11 +358,12 @@ ServerHello.random = pfs( server_random + "tls12 pfs" );
 ServerHello.random[0..3] = gmt_unix_time;
 ~~~
 
-[](IB: if pfs is a hash, I would do ServerHello.random[0..3] = gmt_unix_time; ServerHello.random[4..x] =  pfs( server_random + "tls12 pfs";) 
-
 The operation MUST be performed by the LURK Server as well as the TLS
 Server, upon receiving the master secret or the signature of the
 ecdhe_params from the LURK Client.
+
+
+## Proof of TLS Handshake POH {#sec-poh}
 
 
 ## Response Payload {#sec-lurk-tls-rsa-master-resp}
@@ -321,31 +378,48 @@ struct {
 ~~~
 
 
-### LURK Client Behavior
+## LURK Client Behavior {#sec-rsa-master-clt}
 	
 A rsa_master request is sent so the LURK Server can derive the master
 secret used by the TLS session. Upon receipt of the master_secret the
 Edge Server can generate the session keys and finish the TLS key
 exchange protocol.
 
-### LURK Server Behavior {#sec-tls-master-srv}
+The Poof of TLS Hanshake (POH) helps the LURK Server to audit the
+context associated to the query. Typically it provides evidences that
+the LURK exchange is not performed out of a TLS handshake. The LURK
+Client may include a Proof of TLS Handshake in which case it has to set
+the option to "finished_client" and provide the LURK Server the TLS
+Handshake and Finished message.  
+
+The LURK Client MUST ensure that the transmitted values for
+server_random is S such as server_random = pfs( S ). S MUST be
+transmitted either as the server_random when option is set to "null" or
+in the handshake when option is set to "finished_client".
+
+## LURK Server Behavior {#sec-rsa-master-srv}
 
 Upon receipt of a rsa_master request, the LURK Server proceeds
 according to the following steps:
 
-1. Checking TLS12Base:
-
-    * a) The LURK Server checks the RSA key pair is available (key_id). If the
+1. The LURK Server checks the RSA key pair is available (key_id). If the
 format of the key pair identifier is not understood, an
 "invalid_key_id_type" error is returned.  If the designated key pair is
 not available an "invalid_key_id" error is returned.
 
-    * b) The LURK Server checks the length of the encrypted premaster
- secret and returns an "invalid_payload_format" error if the length
-differs from the length of binary representation of the RSA modulus. 
+2. The LURK Server checks the pfs. If it does not support the
+PFSAlgorithm, an "invalid_prf" error is returned.
 
-    * d) The LURK Server MUST check the format of the server_random  and
-more specifically checks the gmt_unix_time associated to the random is
+3. The LURK Server checks the option. If option is not set to "null" or
+"finished" an "invalid_option" error is returned. 
+
+4. The LURK Server collects the client_random, server_random and
+pre_master parameters either provided explicitly when the option is set
+to "null" or provided via the handshake when option is set to
+"finished".  
+
+5. The LURK Server MUST check the format of the server_random  and more
+specifically checks the gmt_unix_time associated to the random is
 acceptable. Otherwise it SHOULD return an "invalid_tls_random" error.
 The value of the time window is implementation dependent and SHOULD be a
 configurable parameters. The LURK Server MAY also check the
@@ -355,65 +429,81 @@ the TLS Client whose clock might not be synchronized with the one of the
 LURK Server or that might have a TLS implementations that does not
 generate random based on gmt_unix_time. 
 
-2. The LURK Server checks the pfs. If it does not support the
-PFSAlgorithm, an "invalid_prf" error is returned.
+6. The LURK Server computes the necessary ServerHello.random from the
+server_random when applicable as described in {{sec-pfs}}. When option
+is set to "finished" the ServerHello.random in the handshake is replaced
+by its new value. 
 
-3. The LURK Server computes the necessary ServerHello.random from the
-server_random when applicable as described in {{sec-pfs}}.
+7. The LURK Server checks the length of the encrypted premaster secret
+and returns an "invalid_payload_format" error if the length differs from
+the length of binary representation of the RSA modulus. 
 
-4. The LURK Server decrypts the encrypted premaster secret as described
+8. The LURK Server decrypts the encrypted premaster secret as described
 in {{!RFC5246}} section 7.4.7.1.  
-[](IB confused about the above)
 When a PKCS1.5 format error is
 detected, or a mismatch between the TLS versions provided as input and
 the one indicated in the encrypted premaster secret, the Key Server
 returns a randomly generated master secret.
  
-5. If the pre master is appropriately decrypted, then the master secret
-is computed as described in {{!RFC5246}} section 8.1 using the
-client_random, and the server_random provided by the LURK Client.
+9. The LURK Server generates the master secret as described in
+{{!RFC5246}} section 8.1 using the client_random, and the server_random
+provided by the LURK Client.
 
+10. When the option is set to "finished" the Finished message is checked
+as defined in {{!RFC5246}} section 7.4.9. In case of mismatch
+returns an "invalid_finished" error. 
 
-6. The LURK Server returns a master secret in a
+11. The LURK Server returns a master secret in a
 TLS12RSAMasterResponsePayload. 
 
-7. Error are expected to provide the LURK Client an indication of the
+12. Error are expected to provide the LURK Client an indication of the
 cause that resulted in the error. When an error occurs the LURK Server
 MAY ignore the request, or provide more generic error codes such as
 "undefined_error" or "invalid_format".
 
-## rsa_extended_master
+# rsa_extended_master
 
 A exchange of type "rsa_extended_master" enables the LURK Client to
 delegate
 the RSA Key Exchange and authentication. The LURK Server returns the
 extended master secret as defined in {{!RFC7627}}.
 
-### Request Payload
+## Request Payload
 
 The "rsa_extended_master" payload request has the following
 structure: 
 
 ~~~
-struct{
+enum { null(0), sha256_128(1), sha256_256(2),
+(255) }POOPRF 
+enum{
+    server (0), client (1) (255)
+} FinishedLabel
+
+struct {
+    FinishLabel finish_label 
+    opaque handshake_messages<2...2^16-2>  
+    Finished finished     // see RFC5246 7.4.9
+} FinishedParam
+
+
+struct {
     KeyPairID key_id
+    PRFAlgorithm pfs; 
     PRFAlgorithm prf              // see RFC5246 section 6.1
-    opaque session_hash<2...2^16-2>   
-    EncryptedPreMasterSecret  pre_master 
-                                  // see RFC5246 section 7.4.7.1
+    HandshakeContext handshake
+    Options option ; 
+        select( option ) {
+            case ( "null" ):
+            case ( "finished" ):
+                Finished finished
+    }
 }TLS12ExtendedMasterRSARequestPayload;
 ~~~
 
-key_id, pfs, pre_master
+key_id, pfs, option, handshake, finished
 : are defined in {{sec-rsa-master-req}}. 
   
-session_hash
-: The hash of the TLS handshake session as described in {{!RFC7627}}
-section 3.
-
-Note that as the server_random is not provided by the LURK Client, PFS
-mechanisms does not apply here. 
-
 ## Response Payload
 
 rsa_extended_master response payload has a similar structure as the
@@ -422,18 +512,16 @@ rsa_master response payload
 
 
 ## LURK Client Behavior
-	
-A rsa_extended_master request is sent so the LURK Server can derive
-the master secret used by the TLS session. Upon receipt of the
-master_secret the Edge Server can generate the session keys and finish
-the TLS key exchange protocol.
+
+The LURK Client proceeds as described in {{sec-rsa-master-clt}. The ain
+difference is that the necessary element to generate the master secret
+are included in the handshake and or not provided separately. 
 
 ## LURK Server Behavior
 
-The LURK Server proceeds as described in  {{sec-tls-master-srv}} except
+The LURK Server proceeds as described in  {{sec-rsa-master-srv}} except
 that the generation of the extended master is processed as described in
 {{!RFC7627}}.
-
 
 # ecdhe" {#sec-ecdhe}
 
@@ -460,7 +548,10 @@ struct {
 } TLS12POOParams;
 
 struct {
-    TLS12Base base;
+    KeyPairID key_id;
+    PRFAlgorithm pfs;
+    Random client_random;        // see RFC5246 section 7.4.1.2
+    Random server_random;
     SignatureAndHashAlgorithm sig_and_hash  //RFC 5246 section 4.7
     ServerECDHParams ecdhe_params;  // I-D.ietf-tls-rfc4492bis section 5.4
     POOParams poo_params;
@@ -469,7 +560,7 @@ struct {
 
 
  
-base
+key_id, pfs, client_random, server_random
 : is defined in  {{sec-rsa-master-req}}. 
 
 ecdhe_params
@@ -540,7 +631,7 @@ ecdhe_params
 as well as client_random and server_random as described in  
 {{!I-D.ietf-tls-rfc4492bis}} section 5.4.
 
-### LURK Client Behavior
+## LURK Client Behavior
 
 The LURK Client builds the base as described in 
 {{sec-rsa-master-req}}. The LURK Client computes c, t, rG and tG
@@ -552,11 +643,13 @@ signature. If the signature does not match an error SHOULD be
 reported. 
      
 
-### LURK Server Behavior
+## LURK Server Behavior
 
 Upon receiving an ecdhe request, the LURK Server proceeds as follows:
 
-1. The LURK Server performs some format check of the ecdhe_params before
+1. perform steps 1 - 6 as described in {{sec-rsa-master-srv}}
+
+2. The LURK Server performs some format check of the ecdhe_params before
 signing them. If the ecdhe_params does not follow the expected
 structure. With the notations from {{!I-D.ietf-tls-rfc4492bis}}, if
 curve_type is not set to "named_curve", the LURK Server SHOULD respond
@@ -564,17 +657,17 @@ with an "invalid_ec_type" error.  If the curve or namedcurve is not
 supported the LURK Server SHOULD be able to respond with an
 "invalid_ec_curve" error. 
 
-2. The LURK Server processes the poo_params. If the poo_prf is not
+3. The LURK Server processes the poo_params. If the poo_prf is not
 supported, the LURK Extension returns a "invalid_poo_prf" status. If
 poo_prf is supported and different from "null", the LURK Server proceeds
 to the proof of ownership as described in {{sec-ecdhe-req}}. If the
 proof is not properly verified, the LURK Extension returns a
 "invalid_poo" status.
 
-3. The LURK Server processes the base structure as described in
-{{sec-tls-master-srv}}
+4. The LURK Server processes the base structure as described in
+{{sec-rsa-master-srv}}
 
-4. The LURK Server generates the siged_params.
+5. The LURK Server generates the signed_params.
 
 Error are expected to provide the LURK Client an indication of the cause
 that resulted in the error. When an error occurs the LURK Server MAY
@@ -603,6 +696,7 @@ The "capabilities" payload has the following structure:
 struct {
      KeyPairID key_id_type_list<0..255>; 
      PFSAlgorithmList pfs_list<0..255>
+     OptionList option_list<0..255>
      Certificate certificate_list  
 } TLS12RSACapability; 
 
@@ -668,7 +762,7 @@ state
 Server..
 
 
-### LURK Client Behavior
+## LURK Client Behavior
 
 The LURK Client performs a capability request in order to determine
 the possible operations. 
@@ -678,7 +772,7 @@ detect a change in the LURK Server configuration when an error
 occurs. 
 
 
-### LURK Server Behavior"
+## LURK Server Behavior"
 
 Upon receiving a capabilities request, the LURK Extension MUST return
 the capabilities payload associated to a "success" status to the LURK
@@ -699,14 +793,14 @@ A "ping" request has no payload.
 
 A "ping" response has no payload.
 
-### LURK Client Behavior
+## LURK Client Behavior
         
 The LURK Client sends a "ping" request to test the reachability of
 the LURK Server. The reachability is performed for the tls12 LURK
 Extension.
         
 
-### LURK Server Behavior
+## LURK Server Behavior
 
 Upon receiving a ping request, the LURK Extension MUST return the
 ping response associated with a "success" status to the LURK Server.
@@ -716,38 +810,28 @@ Client.
 
 # Security Considerations {#sec-sec}
 
-The security considerations defined in 
-{{?I-D.mglt-lurk-lurk}} applies to the LURK Extension "tls12"
-defined in this document.
+The security considerations defined in {{?I-D.mglt-lurk-lurk}} applies
+to the LURK Extension "tls12" defined in this document.
+
+Anti-replay mechanisms rely on the channel between the LURK Client and
+the LURK Server. With RSA authentication master secret are transmitted
+from the LURK Server to the LURK Client. As such the channel between the
+LURK Client and the LURK Server MUST be private. More specifically, it
+MUST be encrypted with perfect forward secrecy.  
 
 The LURK Extension "tls12" is expected to have response smaller that
 the request or at least not significantly larger, which makes
-"tls12" relatively robust to amplification attacks.
+"tls12" relatively robust to amplification attacks. This is especially
+matters when LURK is using UDP. The use of an authenticated channel
+reduces also the risk of amplification attacks even when UDP is being
+used. 
 
-The LURK Extension "tls12" performs cryptographic operations that may
-lead to resource exhaustion, as such it is RECOMMENDED the LURK Server
-authenticates the LURK Clients. In addition, this prevents when UDP is
-used the LURK Server to be used as a reflector.
+The LURK Client and the LURK Server use time in their way to generate
+the server_random. Care MUST be taken so the LURK Client and LURK Server
+remain synchronized. 
 
-The rsa_master and ecdhe exchange provides a mechanism to provide
-Perfect Forward Secrecy. 
-
-The rsa_extended_master does not provide PFS mechanism as a digest of
-the TLS Key Exchange is provided which prevent the LURK Server to
-perform an agreed operation on the HelloServer.random. 
-
-rsa_master and ecdhe request provides client_random. In order to
-limit the replay of a random value it RECOMMENDED the Server control the
-time at which the random has been generated. The time control should
-also consider desynchronization between the TLS Client and the LURK
-Server.  
 
 ## RSA
-
-The rsa_master and rsa_extended_master exchange carry the master
-secret. These pieces of information enable a passive attacker to hijack
-the session and as such it is RECOMMENDED the LURK Server and the LURK
-Client use an encrypted channel when the authentication RSA is used. 
 
 The rsa_master and rsa_extended_master returns the master_secret
 instead of the premaster. The additional hashing operation
@@ -755,11 +839,6 @@ necessary to generate the master secret is expected to improve the
 protection of the RSA private key against cryptographic analysis based
 on the observation of a set of clear text and corresponding encrypted
 text.
-
-Note that having the Key Server generating the server random on its
-own without any input from the Edge Server would also achieve the PFS in
-a similar way as standard TLS does. The pfs options achieves similar
-properties while enabling a LURK Client to replay a request.    
 
 The standard TLS1.2 is robust against Bleichenbacher attack as it
 provides no means to detect if the error comes from a TLS version
@@ -772,11 +851,11 @@ attack, and cannot be used as a decryption oracle.
 A passive attacker observing the ecdhe exchange may collect a
 sufficient amount of clear text and corresponding signature to perform a
 cryptographic analysis or to reuse the signature for other purposes. As
-a result, it is RECOMMENDED to encrypt the ecdhe exchange between the
+a result, it remains important to encrypt the ecdhe exchange between the
 LURK Client and the LURK Server. Note that this vulnerability is present
 in TLS 1.2 as a TLS Client can accumulate these data as well. The
 difference with LURK is by listening the LURK Server, the accumulation
-is achieved for all  TLS Clients.
+is achieved for all TLS Clients.
 
 As previously mentioned, the LURK Server may be used as signing
 oracle for the specific string:
@@ -787,8 +866,8 @@ oracle for the specific string:
 ~~~
 
 More specifically, the ECDHE_RSA and ECDHE_DSA mechanisms does not
-associate the signature to a TLS1.2 context. As a result, the signature
-could be re-used in another context.
+associate the signature to a TLS1.2 context. As a result, an attacker
+could  re-used the signature in another context.
 
 The attack may operate by collecting a large collection of clear text
 and their corresponding signature. When the attacker want to provide a
@@ -819,6 +898,32 @@ example.
 * limiting the usage of a Cryptographic material to a single usage, in
 our case serving  TLS 1.2. 
 
+## Perfect Foward Secrecy
+
+This document uses sha256 as pfs, a collision resistant hash function
+(CRHF) in order to implement PFS {{sec-pfs}}. In addition, the PFS
+properties is performed through the server_random of 32 byte fix length.
+By construction of the server_random, only the last remaining 28 bytes
+will carry the CRHF output, that is 28 bytes. The PFS property remains
+as long as pfs can be considered as a CRHF and that the 28 bytes of
+randomness carried by the server_random are sufficient. If the 28 bytes
+are not considered are sufficient, the mechanism described in this
+document will not be considered as safe.  
+
+PFS can also be implemented using other mechanisms not based on CRHF.
+For example, a pfs function that is an instance of a pseudo random
+function (PRF), keyed on a key k  that the LURK Server already shares
+with the LURK Client. I.e., server_random=pfs_k(S).
+
+The difference compared to the mechanism based on CRHF is that if the
+man-in-the-middle (MiM) above does later corrupt the LURK Client (on an
+Edge Server), then the MiM can retrieve K, find the old S and query the
+Key server  on such an old S.  I.e., a man-in-the-middle who latter
+corrupt the LURK Client could break forward-secrecy. This cannot happen
+with the CRHF mechanism.  One way to lower the risks may consists in
+using keys with a short life time.  
+
+[](IB: see http://www.forth.gr/onassis/lectures/2010-06-28/presentations/The_cryptographic_hash_function_crisis_and_the_SHA_3_competition.pdf)
 
 
 # IANA Considerations
@@ -842,11 +947,13 @@ LURK Extension Description: RSA, ECDHE_RSA and ECDHE_ECDSA for (D)TLS
     6        invalid_tls_random          [RFC-TBD]
     7        invalid_prf                 [RFC-TBD]
     8        invalid_encrypted_premaster [RFC-TBD]
-    9        invalid_ec_type             [RFC-TBD]
-    10       invalid_ec_curve            [RFC-TBD]
-    11       invalid_poo_prf             [RFC-TBD]
-    12       invalid_poo                 [RFC-TBD]
-    13 - 255 UNASSIGNED                 
+    9        invalid_option              [RFC-TBD]
+    10       invalid_finished            [RFC-TBD]
+    11       invalid_ec_type             [RFC-TBD]
+    12       invalid_ec_curve            [RFC-TBD]
+    13       invalid_poo_prf             [RFC-TBD]
+    14       invalid_poo                 [RFC-TBD]
+    15 - 255 UNASSIGNED                 
     
     LURK tls12 Extension Type 
     
