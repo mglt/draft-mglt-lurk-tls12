@@ -233,12 +233,12 @@ struct {
 } KeyPairID;
 
 enum{
-    sha256_null (0), sha256_sha256 (1) (255)
-} PRFAlgorithm
+    sha256 (0), (255)
+} PFSAlgorithm
 
 struct {
     KeyPairID key_id;
-    PRFAlgorithm pfs; 
+    PFSAlgorithm pfs; 
     Random client_random;        // see RFC5246 section 7.4.1.2
     Random server_random;    
     EncryptedPreMasterSecret  pre_master; 
@@ -274,7 +274,7 @@ A rsa_master_with_poh request payload has the following structure:
 ~~~
 struct {
     KeyPairID key_id;
-    PRFAlgorithm pfs; 
+    PFSAlgorithm pfs; 
     opaque handshake_messages<2...2^16-2> 
               // see RFC5246 section 7.4.9
     Finished finished
@@ -447,13 +447,14 @@ extended master secret as defined in {{!RFC7627}}.
 The "rsa_extended_master" request has the following structure: 
 
 ~~~
+enum { sha256 (0), (255) } PRFAlgorithm
+
 enum { null(0), sha256_128(1), sha256_256(2),
 (255) }POOPRF 
 
 struct {
     KeyPairID key_id
-    PRFAlgorithm pfs; 
-    PRFAlgorithm prf              // see RFC5246 section 6.1
+    PFSAlgorithm pfs            // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
                                   // see RFC7627 section 4
 }TLS12ExtendedMasterRSARequestPayload;
@@ -464,8 +465,7 @@ The "rsa_extended_master_with_poh" request has the following structure:
 ~~~
 struct {
     KeyPairID key_id
-    PRFAlgorithm pfs; 
-    PRFAlgorithm prf              // see RFC5246 section 6.1
+    PFSAlgorithm pfs              // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
               // see RFC5246 section 7.4.9
     Finished finished
