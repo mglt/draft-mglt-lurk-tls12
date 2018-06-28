@@ -35,11 +35,11 @@ author:
         ins: I. Boureanu
         name: Ioana Boureanu
         org: University of Surrey
-        street: 
+        street: Stag Hill Campus
         -
-        city: 
+        city:  Guildford
         -
-        code: 
+        code: GU2 7XH
         -
         country: UK
         email: i.boureanu@surrey.ac.uk
@@ -106,6 +106,8 @@ rogue server. Such delegation provides a high scalability of the
 architecture and prevents additional delays when a TLS session is
 established. 
 
+
+
 The LURK Architecture {{?I-D.mglt-lurk-lurk}} and the LURK Extension
 'tls12' do not proceed to the delegation of the HTTPS delegation by
 delegating the entire TLS termination. Instead, the TLS termination is
@@ -121,17 +123,13 @@ instantaneously suspend the delegation with a suspicious node. On the
 other hand the LURK Extension 'tls12' introduces some latency, and is
 not as scalable as STAR or delegated credential solutions. 
 
-[](IB: a comparison should be made here)
-
-[](DM: I understand that the comparison shoudl be between lurk / star
-and subcert. I believe that was the intention of teh paragraph above, so
-I might misunderstand the comment.)
-
 
 The LURK Extension 'tls12' is seen as a complementary to the STAR and
-"delegated credentials". The LURK Extension 'tls12' is a back end
+"delegated credentials". The LURK Extension 'tls12' is a backend
 solution that does not require any modifications from TLS Client or the
 CA. It is also aimed at protecting the Cryptographic Material.
+
+[](IB: a comparison should be made here, i.e., STAR/"delegated credentials" vs LURK)
 
 LURK may also be deployed within an administrative domain in order to to
 provide a more controlled deployment of TLS Servers.
@@ -202,18 +200,24 @@ struct {
 
 # rsa_master, rsa_master_with_poh
 
-A exchange of type "rsa_master" or "rsa_master_with_poh" enables the
+An exchange of type "rsa_master" or "rsa_master_with_poh" enables the
 LURK Client to delegate the RSA Key Exchange and authentication as
 defined in {{!RFC5246}}. The LURK Server returns the master secret.
-"rsa_master" provides the necessary parameters to generate the master
-secret as well as to prevent the exchange to be replayed. The
-"rsa_master_with_poh" provides in addition a proof of handshake (PoH).
+
+"rsa_master" provides the necessary parameters and details to generate the master
+secret, as well as to hinder replaying of old handshake messages by
+a corrupt LURK Client. I.e., some attestation of message-freshness 
+is acquired by the LURK Server.
+
+In addition, the"rsa_master_with_poh" provides  a proof of handshake (PoH).
 The proof of handshake consists in providing the Finished message of the
-TLS Client so the LURK Server can check the LURK request is performed in
+TLS Client to the LURK Server, so that latter  can perform more checks that in the
+"rsa_master" mode. Notably, herein, the LURK Server also 
+checks that the LURK request is performed in
 a context of a TLS handshake.  
 
-While "rsa_master" and "rsa_master_with_poh" exchange have different
-request, the response is the same. The motivation for having different
+While "rsa_master" and "rsa_master_with_poh" exchange have respectively different
+requests, the response is the same. The motivation for having different
 type is that the parameters provided to the LURK Server are provided
 using different format. "rsa_master" provides them explicitly, while
 "rsa_master_with_poh" provides them via handshake messages. 
@@ -238,7 +242,7 @@ enum{
 
 struct {
     KeyPairID key_id;
-    PFSAlgorithm pfs; 
+    PFSAlgorithm freshness_funct; 
     Random client_random;        // see RFC5246 section 7.4.1.2
     Random server_random;    
     EncryptedPreMasterSecret  pre_master; 
@@ -255,7 +259,7 @@ representation of the public key using sha256. The binary representation
 of RSA keys is described in {{!RFC8017}}. The binary representation of
 ECC keys is the subjectPublicKeyInfo structure defined in {{!RFC5480}}.
 
-pfs
+freshness_funct
 : the one-way hash function (OWHF) used by LURK to implement Perfect
 Forward Secrecy.
 
@@ -263,7 +267,7 @@ client_random
 : the random value associated to the TLS Client as defined in
 {{!RFC5246}} Section 7.4.1.2.  
   
-server_random : the random value associated to the TLS Server as defined
+server_random: the random value associated to the TLS Server as defined
 in {{!RFC5246}} Section 7.4.1.2.  
 
 EncryptedPreMasterSecret : The encrypted master secret as defined in
@@ -274,14 +278,14 @@ A rsa_master_with_poh request payload has the following structure:
 ~~~
 struct {
     KeyPairID key_id;
-    PFSAlgorithm pfs; 
+    PFSAlgorithm freshness_funct; 
     opaque handshake_messages<2...2^16-2> 
               // see RFC5246 section 7.4.9
     Finished finished
 } TLS12RSAMasterWithPoHRequestPayload;
 ~~~
 
-key_id, pfs are defined above  
+key_id, freshness_funct are defined above  
 
 handshake_messages
 : provides the necessary handshake messages to compute the Finished
@@ -293,43 +297,48 @@ finished
 
 ### Perfect Forward Secrecy {#sec-pfs}
 
-This document defines a mechanism which uses a function called  pfs, to
+This document defines a mechanism which uses a function called  freshness_funct, to
 prevent an attacker to send a request to the LURK Server in such a way
-that the said attacker can obtain back the master secret for an old
-handshake. In other words, the use of this function on the side of the
-LURK Server helps prevent a forward-secrecy attack on an old TLS
-session using its handshake-data observed by the adversary.
+that the said attacker can obtain back the mastersecret for an old
+handshake. In other words, the use of this function
+ helps prevent a forward-secrecy attack on an old TLS
+session, where the attack would make use that session's handshake-data 
+observed by the adversary.
 
-This document achieves PFS  with pfs being a collision-resistant hash
+This design achieves PFS  with freshness_funct being a collision-resistant hash
 function (CHRF).  By CRHF, we mean a one-way hash function (OWHF) which
 also has collision resistance; the latter means that it is
 computationally infeasible to find any two inputs x1 and x2 such that
-pfs(x1) = pfs(x2).  By one-way hash function (OWHF) we mean, as
-standard, a hash function pfs that  satisfies preimage resistance and
+freshness_funct(x1) = freshness_funct(x2).  By one-way hash function (OWHF) we mean, as
+standard, a hash function freshness_funct that  satisfies preimage resistance and
 2nd-preimage resistance.  That is, given a hash value y, it is
-computationally infeasible to find an x such that pfs(x) = y, and
-respectively--  given a value x1 and its hash h (x1), it is
-computationally infeasible to find another x2 such that pfs(x2) =
-pfs(x1).
+computationally infeasible to find an x such that freshness_funct(x) = y, and
+respectively--  given a value x1 and its hash freshness_funct(x1), it is
+computationally infeasible to find another x2 such that freshness_funct(x2) =
+freshness_funct(x1).
 
-For the concrete use of our pfs funtions, let S be a fresh.  randomly
-picked value generated  by the LURK Server.  The value of server_random
-in the TLS exchange is then equal to pfs(S), i.e., server_random=pfs(S).
-Between the LURK Client  and the LURK Server only server-random is
-exchanged.  The LURK Server sends S to the Key Server, in the query.
+For the concrete use of our freshness_funct funtions, let S be a fresh,  randomly
+picked value generated  by the LURK Client.  The value of server_random
+in the TLS exchange is then equal to freshness_funct(S), i.e., server_random=freshness_funct(S).
+Between the TLS Client  and the LURK Server only server-random is
+exchanged.  The LURK Client sends S to the Key Server, in the query. 
+Note that the latter SHOULD happen over a secure channel.
 
 A man-in-the-middle attacker observing the (plaintext) TLS handshake
-between a TLS Client and the TLS Server does not see S, but only
-server_random.  The preimage resistance guaranted by the pfs makes it
+between a TLS Client and the LURK Client does not see S, but only
+server_random.  The preimage resistance guaranted by the freshness_funct makes it
 such that this man-in-the-middle cannot retrieve S out of the observed
 server-random.  As such, this man-in-the-middle attacker cannot query
 the S corresponding to an (old) observed handshake to the Key Server.
-Moreover,  the collision resistance guaranteed by  the pfs makes it such
+Moreover,  the collision resistance guaranteed by  the freshness_funct makes it such
 that if  the aforementioned man-in-the-middle cannot find S' such that
-pfs(S)=pfs(S').
+freshness_funct(S)=freshness_funct(S').
 
-As discussed in {{sec-sec}}, PFS may be achieved in other ways, which
-may be standardized in future version of the LURK extension "tls12.
+As discussed in {{sec-sec}}, PFS may be achieved in other ways (i.e., not using a CRHF 
+and the aforementioned exchanges but other cryptographic primitives and other exchanges). 
+These may offer better computational efficiency.
+These may be standardized in future versions of the LURK extension "tls12.
+
 
 The server_random MUST follow the structure of {{!RFC5246}} section
 7.4.1.2, which carries the gmt_unix_time in the first four bytes. 
@@ -338,9 +347,13 @@ server_random of the LURK exchange as defined below:
 
 ~~~
 gmt_unix_time = server_random[0..3];
-ServerHello.random = pfs( server_random + "tls12 pfs" );  
+ServerHello.random = freshness_funct( server_random + "tls12 pfs" );  
 ServerHello.random[0..3] = gmt_unix_time;
 ~~~
+
+[](IB: this code is a bit confusing w.r.t. the notions used in the explanations given before it; I.e., server_random in the code
+corresponds to S in the explanations before the code, 
+ServerHello.random in the code == server_random in the explanations before the code )
 
 The operation MUST be performed by the LURK Server as well as the TLS
 Server, upon receiving the master secret or the signature of the
@@ -370,11 +383,11 @@ protocol.
 
 A LURK Client MAY use the rsa_master_with_poh to provide the LURK Server
 evidences that the LURK exchange is performed in the context  of a TLS
-handshake.  The Poof of TLS Hanshake (POH) helps the LURK Server to
+handshake.  The Proof of TLS Hanshake (POH) helps the LURK Server to
 audit the context associated to the query. 
 
 The LURK Client MUST ensure that the transmitted values for
-server_random is S such as server_random = pfs( S ). 
+server_random is S such as server_random = freshness_funct( S ). 
 
 ## LURK Server Behavior {#sec-rsa-master-srv}
 
@@ -386,7 +399,7 @@ format of the key pair identifier is not understood, an
 "invalid_key_id_type" error is returned.  If the designated key pair is
 not available an "invalid_key_id" error is returned.
 
-2. The LURK Server checks the pfs. If it does not support the
+2. The LURK Server checks the freshness_funct. If it does not support the
 PFSAlgorithm, an "invalid_prf" error is returned.
 
 4. The LURK Server collects the client_random, server_random and
@@ -454,7 +467,7 @@ enum { null(0), sha256_128(1), sha256_256(2),
 
 struct {
     KeyPairID key_id
-    PFSAlgorithm pfs            // see RFC5246 section 6.1
+    PFSAlgorithm freshness_funct            // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
                                   // see RFC7627 section 4
 }TLS12ExtendedMasterRSARequestPayload;
@@ -465,7 +478,7 @@ The "rsa_extended_master_with_poh" request has the following structure:
 ~~~
 struct {
     KeyPairID key_id
-    PFSAlgorithm pfs              // see RFC5246 section 6.1
+    PFSAlgorithm freshness_funct              // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
               // see RFC5246 section 7.4.9
     Finished finished
@@ -473,7 +486,7 @@ struct {
 }TLS12ExtendedMasterRSAWithPoHRequestPayload;
 ~~~
 
-key_id, pfs, option, handshake, finished
+key_id, freshness_funct, option, handshake, finished
 : are defined in {{sec-rsa-master-req}}. 
 
 handshake_messages
@@ -526,7 +539,7 @@ struct {
 
 struct {
     KeyPairID key_id;
-    PRFAlgorithm pfs;
+    PRFAlgorithm freshness_funct;
     Random client_random;        // see RFC5246 section 7.4.1.2
     Random server_random;
     SignatureAndHashAlgorithm sig_and_hash  //RFC 5246 section 4.7
@@ -537,7 +550,7 @@ struct {
 
 
  
-key_id, pfs, client_random, server_random
+key_id, freshness_funct, client_random, server_random
 : is defined in  {{sec-rsa-master-req}}. 
 
 ecdhe_params
@@ -672,7 +685,7 @@ The "capabilities" payload has the following structure:
 
 struct {
      KeyPairID key_id_type_list<0..255>; 
-     PFSAlgorithmList pfs_list<0..255>
+     PFSAlgorithmList freshness_funct_list<0..255>
      OptionList option_list<0..255>
      Certificate certificate_list  
 } TLS12RSACapability; 
@@ -707,8 +720,8 @@ struct {
 key_id_type_list
 : the supported key_id_type.
 
-pfs_list
-: designates the list of pfs ( see {{sec-rsa-master-req}}). 
+freshness_funct_list
+: designates the list of freshness_funct ( see {{sec-rsa-master-req}}). 
 
 certificate_list
 : designates the certificates associated to message type. The format is
@@ -790,11 +803,13 @@ Client.
 The security considerations defined in {{?I-D.mglt-lurk-lurk}} applies
 to the LURK Extension "tls12" defined in this document.
 
-Anti-replay mechanisms rely on the channel between the LURK Client and
-the LURK Server. With RSA authentication master secret are transmitted
-from the LURK Server to the LURK Client. As such the channel between the
-LURK Client and the LURK Server MUST be private. More specifically, it
-MUST be encrypted with perfect forward secrecy.  
+Anti-replay mechanisms rely in part on the security of channel 
+between the LURK Client and
+the LURK Server. As such the channel between the
+LURK Client and the LURK Server MUST be ensuring confidentiality and integrity. More specifically, the exchanges between the 
+LURK Client and the LURK Server
+MUST be an encrypted with authentication encryption, and 
+the two parties had previously mutually authenticated.
 
 The LURK Extension "tls12" is expected to have response smaller that
 the request or at least not significantly larger, which makes
@@ -877,30 +892,43 @@ our case serving  TLS 1.2.
 
 ## Perfect Foward Secrecy
 
-This document uses sha256 as pfs, a collision resistant hash function
-(CRHF) in order to implement PFS {{sec-pfs}}. In addition, the PFS
-properties is performed through the server_random of 32 byte fix length.
-By construction of the server_random, only the last remaining 28 bytes
-will carry the CRHF output, that is 28 bytes. The PFS property remains
-as long as pfs can be considered as a CRHF and that the 28 bytes of
-randomness carried by the server_random are sufficient. If the 28 bytes
-are not considered are sufficient, the mechanism described in this
+This document uses sha256 as the freshness_funct, in order to achieve PFS {{sec-pfs}} as described above. 
+By construction of the server_random, of the output of freshness_funct we will keep only the last 28 bytes. 
+The PFS property remains
+as long as this truncated version of  freshness_funct can be considered a CRHF and that the 28 bytes of
+randomness carried by the server_random are sufficient. Otherwise, the mechanism described in this
 document will not be considered as safe.  
 
-PFS can also be implemented using other mechanisms not based on CRHF.
-For example, a pfs function that is an instance of a pseudo random
-function (PRF), keyed on a key k  that the LURK Server already shares
-with the LURK Client. I.e., server_random=pfs_k(S).
 
-The difference compared to the mechanism based on CRHF is that if the
-man-in-the-middle (MiM) above does later corrupt the LURK Client (on an
-Edge Server), then the MiM can retrieve K, find the old S and query the
-Key server  on such an old S.  I.e., a man-in-the-middle who latter
-corrupt the LURK Client could break forward-secrecy. This cannot happen
-with the CRHF mechanism.  One way to lower the risks may consists in
-using keys with a short life time.  
+PFS can also be implemented using other mechanisms not based on CRHF. See I and II below.
 
-[](IB: see http://www.forth.gr/onassis/lectures/2010-06-28/presentations/The_cryptographic_hash_function_crisis_and_the_SHA_3_competition.pdf)
+I. For example, as  freshness_funct, one can use an instance of a pseudo random
+function (PRF), keyed on a key K  that the LURK Server already shares
+with the LURK Client. I.e., server_random=freshness_funct(S;K).
+In this case, the mechanisms to achieve PFS are as follows:
+1. the LURK Client and the LURK Server  run a key-establishement protocol before every LURK session 
+to establish such a new key K for every LURK session; the time-to-live of K is for one session allow.
+2. the LURK Server  generates the value  S on its side and send the server_random to the LURK Client.
+3. the LURK Client uses this server_random with the TLS Client
+4. the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
+the messages forwarded therein; 
+
+II. In fact, since the channel between the LURK Client and the LURK Server  MUST be encrypted by default, all for 2 steps in point I above can 
+be combined into 1 step (without the need of a specially executed key-establishment): 
+ a.  the LURK Server  sends the server_random to the LURK Client.
+ b.  the LURK Client uses this server_random with the TLS Client
+ c.  the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
+the messages forwarded therein; 
+
+These two versions  are more expensive on the communication than the version achieving PFS with a 
+CHRF. I.e., in I and II, the LURK Server needs to be involved on the first part of the TLS handshake to
+produce the S or server_random for the LURK Client. 
+However, note that the LURK Client no longer queries S, hence the risk of a man-in-the-middle querying an old S is eliminated
+by design.
+
+Version II above is akin to what "Content delivery over TLS: a cryptographic analysis of keyless SSL,” by K. Bhargavan, I. Boureanu, P. A. Fouque, 
+C. Onete and B. Richard at 2017 IEEE European Symposium on Security and Privacy (EuroS&P), Paris, 2017, pp. 1-16, suggested in order
+to amend (forward-secrecy) attacks  on Keyless SSL.
 
 
 # IANA Considerations
@@ -972,7 +1000,7 @@ Kelsey Cairns.
            TLS_RSA_*, ... 
     --------> 
                         S = server_random                          
-                        server_random = pfs( S )
+                        server_random = freshness_funct( S )
 
                         ServerHello
                             tls_version  
@@ -995,11 +1023,11 @@ Kelsey Cairns.
                             key_id
                             client_random
                             S
-                            pfs
+                            freshness_funct
                             EncryptedPremasterSecret    
                         -------->
     
-                                     server_random = pfs( S )
+                                     server_random = freshness_funct( S )
 
                                      master_secret = PRF(\
                                      pre_master_secret + \
@@ -1079,7 +1107,7 @@ Kelsey Cairns.
            Extension Supported EC, Supported Point Format
     --------> 
                         S = server_random                          
-                        server_random = pfs( S )
+                        server_random = freshness_funct( S )
        
                         TLS12 Request Header
                         TLS12ECDHEInputPayload
@@ -1088,7 +1116,7 @@ Kelsey Cairns.
                             S
                             ecdhe_params     
                         -------->
-                                     server_random = pfs( S )
+                                     server_random = freshness_funct( S )
 
                                      signature = ECDSA( client_random +\
                                      server_random + ecdhe_params )
