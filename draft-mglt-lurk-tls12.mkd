@@ -894,23 +894,30 @@ our case serving  TLS 1.2.
 
 This document uses sha256 as the freshness_funct, in order to achieve PFS {{sec-pfs}} as described above. 
 By construction of the server_random, of the output of freshness_funct we will keep only the last 28 bytes. 
-The PFS property remains
-as long as this truncated version of  freshness_funct can be considered a CRHF and that the 28 bytes of
-randomness carried by the server_random are sufficient. Otherwise, the mechanism described in this
-document will not be considered as safe.  
+The truncation of the PFS output to 28 bits does affect the propreties of the hash.
 
 
-PFS can also be implemented using other mechanisms not based on CRHF. See I and II below.
+Alternatively, we would use a hash function like SHA3 (or, more explicitly SHAKE) which considered 
+variable output length as part of the design.
+The SHAKE functions allow arbitrary output lengths and  the PFS-input S  can be of arbitrary length too.
+However, for SHAKE128-d, if the truncated output is of length d=28 bits, then this gives only 28/2=14 bits collision-resistance, > 14 bits preimage resistance
+and 14 bits second preimage resistance.
+This is not ideal.
+
+
+
+So, for PFS, we  also consider other mechanisms not based on CRHF. See I and II below.
 
 I. For example, as  freshness_funct, one can use an instance of a pseudo random
 function (PRF), keyed on a key K  that the LURK Server already shares
 with the LURK Client. I.e., server_random=freshness_funct(S;K).
 In this case, the mechanisms to achieve PFS are as follows:
-1. the LURK Client and the LURK Server  run a key-establishement protocol before every LURK session 
-to establish such a new key K for every LURK session; the time-to-live of K is for one session allow.
-2. the LURK Server  generates the value  S on its side and send the server_random to the LURK Client.
-3. the LURK Client uses this server_random with the TLS Client
-4. the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
+1. The LURK Client and the LURK Server  run a key-establishment protocol before every LURK session 
+to establish such a new key K for every LURK session. Alternatively, the export this key of the key-establishment
+run to secure the channel. The time-to-live of K is  one session only.
+2. The LURK Server  generates the value  S on its side and send the server_random to the LURK Client.
+3. The LURK Client uses this server_random with the TLS Client
+4. The LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
 the messages forwarded therein; 
 
 II. In fact, since the channel between the LURK Client and the LURK Server  MUST be encrypted by default, all for 2 steps in point I above can 
@@ -925,6 +932,7 @@ CHRF. I.e., in I and II, the LURK Server needs to be involved on the first part 
 produce the S or server_random for the LURK Client. 
 However, note that the LURK Client no longer queries S, hence the risk of a man-in-the-middle querying an old S is eliminated
 by design.
+Also note that option I and option II offer overall better security that the solution based on the hash function.
 
 Version II above is akin to what "Content delivery over TLS: a cryptographic analysis of keyless SSL,” by K. Bhargavan, I. Boureanu, P. A. Fouque, 
 C. Onete and B. Richard at 2017 IEEE European Symposium on Security and Privacy (EuroS&P), Paris, 2017, pp. 1-16, suggested in order
