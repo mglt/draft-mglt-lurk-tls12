@@ -930,9 +930,9 @@ be combined into 1 step (without the need of a specially executed key-establishm
  c.  the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
 the messages forwarded therein; 
 
-Again, option I and option II offer overall better security that the solution based on the hash function.
+Again, option I and option II offer  better PFS security that the solution based on the hash function.
 Yet, option I and option II  are more expensive on the communication than the version achieving PFS with a 
-CHRF. I.e., in I and II, the LURK Server needs to be involved on the first part of the TLS handshake to
+hash function. I.e., in I and II, the LURK Server needs to be involved on the first part of the TLS handshake to
 produce the S or server_random for the LURK Client. 
 However, note that the LURK Client no longer queries S, hence the risk of a man-in-the-middle querying an old S is eliminated
 by design.
