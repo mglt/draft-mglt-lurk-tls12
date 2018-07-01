@@ -912,7 +912,8 @@ One reason why we have the hash-based solution to is to reduce communication cos
 LURK Client and the LURK Server, whilst still getting more than some security w.r.t. a MiM corrupting a LURK Client and then 
 attempting a PFS attack.
 
-But, if we disregard the overhaed on communication costs, we  can consider other mechanisms not based on CRHF. See I and II below.
+But, if we disregard the overhaed on communication costs, we  can consider other mechanisms not based on CRHF for attaining
+PFS security. See I and II below.
 
 I. For example, as  freshness_funct, one can use an instance of a pseudo random
 function (PRF), keyed on a key K  that the LURK Server already shares
@@ -933,7 +934,6 @@ be combined into 1 step (without the need of a specially executed key-establishm
  c.  the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
 the messages forwarded therein; 
 
-Again, option I and option II MAY offer  better PFS security that the solution based on the hash function.
 Yet, option I and option II  are more expensive on the communication than the version achieving PFS with a 
 hash function. I.e., in I and II, the LURK Server needs to be involved on the first part of the TLS handshake to
 produce the S or server_random for the LURK Client. 
