@@ -892,24 +892,27 @@ our case serving  TLS 1.2.
 
 ## Perfect Foward Secrecy
 
+
 This document uses sha256 as the freshness_funct, in order to achieve PFS {{sec-pfs}} as described above. 
 By construction of the server_random, of the output of freshness_funct we will keep only the last 28 bytes. 
-The truncation of the PFS output to 28 bits DOES affect the propreties of the hash.
+The PFS property is in place as long as this truncated version of  freshness_funct can be considered a CRHF and 
+that the 28 bytes of randomness carried by the server_random are sufficient. 
+Otherwise, the mechanism described in this
+ document will not be considered as safe. 
 
-
+Details on the truncation will be added. 
 Alternatively, we could use a hash function like SHA3 (or, more explicitly SHAKE) which considers
-variable output length as part of its design.
+variable output length  as part of its design.
 The SHAKE functions allow arbitrary output lengths and  the PFS-input S  can be of arbitrary length too.
-However, for SHAKE128-d, if the truncated output is of length d as low as 28 bits, then one only gets 28/2=14 bits security w.r.t.
- collision-resistance, > 14 bits w.r.t. preimage resistance
-and 14 bits security w.r.t. second preimage resistance.
-This is not ideal.
+However, for SHAKE128-d, if the truncated output is of length d as low as 224 bits (28 bytes), then one only gets 224/2=112 bits security w.r.t.
+ collision-resistance, > 112 bits w.r.t. preimage resistance
+and 112 bits security w.r.t. second preimage resistance.
 
-The reason why we have this hash-based solution t is to reduce communication costs between the 
-LURK Client and the LURK Server whilst still getting more than 0 bits security w.r.t. a MiM corrupting a LUR Client and then 
+One reason why we have the hash-based solution to is to reduce communication costs between the 
+LURK Client and the LURK Server, whilst still getting more than some security w.r.t. a MiM corrupting a LURK Client and then 
 attempting a PFS attack.
 
-But, for better PFS, we  can consider other mechanisms not based on CRHF. See I and II below.
+But, if we disregard the overhaed on communication costs, we  can consider other mechanisms not based on CRHF. See I and II below.
 
 I. For example, as  freshness_funct, one can use an instance of a pseudo random
 function (PRF), keyed on a key K  that the LURK Server already shares
@@ -930,16 +933,14 @@ be combined into 1 step (without the need of a specially executed key-establishm
  c.  the LURK Server checks the correctness of the use of the said server_random when the query for the master_secret is made, with 
 the messages forwarded therein; 
 
-Again, option I and option II offer  better PFS security that the solution based on the hash function.
+Again, option I and option II MAY offer  better PFS security that the solution based on the hash function.
 Yet, option I and option II  are more expensive on the communication than the version achieving PFS with a 
 hash function. I.e., in I and II, the LURK Server needs to be involved on the first part of the TLS handshake to
 produce the S or server_random for the LURK Client. 
 However, note that the LURK Client no longer queries S, hence the risk of a man-in-the-middle querying an old S is eliminated
 by design.
 
-For best security, we endorse option I and option II and not the hash-function based construction.
-
-Version II above is akin to what "Content delivery over TLS: a cryptographic analysis of keyless SSL,” by K. Bhargavan, I. Boureanu, P. A. Fouque, 
+Option II above is akin to what "Content delivery over TLS: a cryptographic analysis of keyless SSL,” by K. Bhargavan, I. Boureanu, P. A. Fouque, 
 C. Onete and B. Richard at 2017 IEEE European Symposium on Security and Privacy (EuroS&P), Paris, 2017, pp. 1-16, suggested in order
 to amend (forward-secrecy) attacks  on Keyless SSL.
 
