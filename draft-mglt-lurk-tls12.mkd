@@ -65,7 +65,7 @@ different administrative domain. Most Cryptographic Operations are
 related to the TLS authentication and the current document limits the
 Cryptographic Operations to the following authentication methods: RSA
 and ECDHE_RSA defined in {{!RFC5246}}, {{!RFC6347}} as well as
-ECDHE_ECDSA defined in {{!I-D.ietf-tls-rfc4492bis}}.
+ECDHE_ECDSA defined in {{!RFC8422}}.
 
 A more detailed description of some use cases foreseen in a TLS context
 can be found in {{?I-D.mglt-lurk-tls-use-cases}}.
@@ -103,8 +103,6 @@ rogue server. Such delegation provides a high scalability of the
 architecture and prevents additional delays when a TLS session is
 established. 
 
-
-
 The LURK Architecture {{?I-D.mglt-lurk-lurk}} and the LURK Extension
 'tls12' do not proceed to the delegation of the HTTPS delegation by
 delegating the entire TLS termination. Instead, the TLS termination is
@@ -125,8 +123,6 @@ The LURK Extension 'tls12' is seen as a complementary to the STAR and
 "delegated credentials". The LURK Extension 'tls12' is a backend
 solution that does not require any modifications from TLS Client or the
 CA. It is also aimed at protecting the Cryptographic Material.
-
-[](IB: a comparison should be made here, i.e., STAR/"delegated credentials" vs LURK)
 
 LURK may also be deployed within an administrative domain in order to to
 provide a more controlled deployment of TLS Servers.
@@ -152,7 +148,8 @@ enum {
 
 enum {
    capabilities (0), ping (1), rsa_master (2), 
-   rsa_extended_master (3), ecdhe (4), (255)
+   rsa_master_with_poh (3), rsa_extended_master (4), 
+   rsa_extended_master_with_poh (5), ecdhe (6), (255)
 }TLS12Type;
 
 
@@ -164,7 +161,7 @@ enum {
 
     // code points for rsa authentication
     invalid_key_id_type (4), invalid_key_id (5),
-    invalid_tls_random (6), invalid_prf (7),
+    invalid_tls_random (6), invalid_freshness_funct (7),
     invalid_encrypted_premaster (8), invalid_finished (9)
 
     //code points for ecdhe authentication
@@ -235,11 +232,16 @@ struct {
 
 enum{
     sha256 (0), (255)
-} PFSAlgorithm
+} FreshnessFunct
+
+enum{
+    sha256 (0), sha384(1), sha512(2), (255)
+} PRFHash
 
 struct {
     KeyPairID key_id;
-    PFSAlgorithm freshness_funct; 
+    FreshnessFunct freshness_funct; 
+    PRFHash prf_hash;
     Random client_random;        // see RFC5246 section 7.4.1.2
     Random server_random;    
     EncryptedPreMasterSecret  pre_master; 
@@ -260,6 +262,11 @@ freshness_funct
 : the one-way hash function (OWHF) used by LURK to implement Perfect
 Forward Secrecy.
 
+prf_hash
+: the one way hash function used by the Pseudo Random Function (PRF) to
+generate the master secret. PRF and hash function are defined in
+{!RFC5246}} Section 5. 
+
 client_random 
 : the random value associated to the TLS Client as defined in
 {{!RFC5246}} Section 7.4.1.2.  
@@ -275,7 +282,7 @@ A rsa_master_with_poh request payload has the following structure:
 ~~~
 struct {
     KeyPairID key_id;
-    PFSAlgorithm freshness_funct; 
+    FreshnessFunct freshness_funct; 
     opaque handshake_messages<2...2^16-2> 
               // see RFC5246 section 7.4.9
     Finished finished
@@ -401,7 +408,7 @@ format of the key pair identifier is not understood, an
 not available an "invalid_key_id" error is returned.
 
 2. The LURK Server checks the freshness_funct. If it does not support the
-PFSAlgorithm, an "invalid_prf" error is returned.
+FreshnessFunct, an "invalid_freshness_funct" error is returned.
 
 4. The LURK Server collects the client_random, server_random and
 pre_master parameters either provided explicitly (rsa_master) or within
@@ -461,14 +468,14 @@ extended master secret as defined in {{!RFC7627}}.
 The "rsa_extended_master" request has the following structure: 
 
 ~~~
-enum { sha256 (0), (255) } PRFAlgorithm
+enum { sha256 (0), (255) } FreshnessFunct
 
 enum { null(0), sha256_128(1), sha256_256(2),
 (255) }POOPRF 
 
 struct {
     KeyPairID key_id
-    PFSAlgorithm freshness_funct            // see RFC5246 section 6.1
+    FreshnessFunct freshness_funct            // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
                                   // see RFC7627 section 4
 }TLS12ExtendedMasterRSARequestPayload;
@@ -479,7 +486,7 @@ The "rsa_extended_master_with_poh" request has the following structure:
 ~~~
 struct {
     KeyPairID key_id
-    PFSAlgorithm freshness_funct              // see RFC5246 section 6.1
+    FreshnessFunct freshness_funct              // see RFC5246 section 6.1
     opaque handshake_messages<2...2^16-2>  
               // see RFC5246 section 7.4.9
     Finished finished
@@ -517,7 +524,7 @@ that the generation of the extended master is processed as described in
 # ecdhe" {#sec-ecdhe}
 
 A exchange of type "ecdhe" enables the LURK Client to delegate the
-ECDHE_RSA {{!RFC5246}} or the ECDHE_ECDSA {{!I-D.ietf-tls-rfc4492bis}}
+ECDHE_RSA {{!RFC5246}} or the ECDHE_ECDSA {{!RFC8422}}
 authentication. 
         
 ## Request Payload {#sec-ecdhe-req}
@@ -533,18 +540,18 @@ struct {
     select( poo_prf) {
         case ( "null" ):
         case ( "sha256_128" or "sha256_256" ):
-            ECPoint rG;  //I-D.ietf-tls-rfc4492bis section 5.4
+            ECPoint rG;  //RFC8422 section 5.4
             ECPoint tG;
     }
 } TLS12POOParams;
 
 struct {
     KeyPairID key_id;
-    PRFAlgorithm freshness_funct;
+    FreshnessFunct freshness_funct;
     Random client_random;        // see RFC5246 section 7.4.1.2
     Random server_random;
     SignatureAndHashAlgorithm sig_and_hash  //RFC 5246 section 4.7
-    ServerECDHParams ecdhe_params;  // I-D.ietf-tls-rfc4492bis section 5.4
+    ServerECDHParams ecdhe_params;  // RFC8422 section 5.4
     POOParams poo_params;
 } TLS12ECDHERequestPayload;
 ~~~
@@ -555,7 +562,7 @@ key_id, freshness_funct, client_random, server_random
 : is defined in  {{sec-rsa-master-req}}. 
 
 ecdhe_params
-: contains as defined in {{!I-D.ietf-tls-rfc4492bis}} section 5.4, the
+: contains as defined in {{!RFC8422}} section 5.4, the
 elliptic curve domain parameters associated with the ECDH public key
 (defined by the ECParameters structure) and the ephemeral ECDH public
 key (defined by the ECPoint structure).  The public key is also noted in
@@ -590,7 +597,8 @@ c MUST NOT be under the control of the LURK Client. To achieve that
 goal, c is generated as described below:
 
 ~~~
-c = poo_prf ( base + ecdhe_params + "tls12 poo")  
+c = poo_prf ( key_id + freshness_funct + client_random + server_random +
+              sig_and_hash+ ecdhe_params + "tls12 poo")  
 ~~~
 
 The LURK Client computes t = cb + r and sends rG, tG, in poo_params
@@ -612,7 +620,7 @@ The "ecdhe" response payload has the following structure:
 
 ~~~
 struct {
-    Signature signed_params;  // I-D.ietf-tls-rfc4492bis section 5.4  
+    Signature signed_params;  // RFC8422 section 5.4  
 } TLS12ECDHEResponsePayload;
 ~~~
 
@@ -620,7 +628,7 @@ signed_params
 : signature applied to the hash of the
 ecdhe_params
 as well as client_random and server_random as described in  
-{{!I-D.ietf-tls-rfc4492bis}} section 5.4.
+{{!RFC8422}} section 5.4.
 
 ## LURK Client Behavior
 
@@ -642,7 +650,7 @@ Upon receiving an ecdhe request, the LURK Server proceeds as follows:
 
 2. The LURK Server performs some format check of the ecdhe_params before
 signing them. If the ecdhe_params does not follow the expected
-structure. With the notations from {{!I-D.ietf-tls-rfc4492bis}}, if
+structure. With the notations from {{!RFC8422}}, if
 curve_type is not set to "named_curve", the LURK Server SHOULD respond
 with an "invalid_ec_type" error.  If the curve or namedcurve is not
 supported the LURK Server SHOULD be able to respond with an
@@ -683,22 +691,36 @@ supported certificates, the supported signatures and hash associated.
 The "capabilities" payload has the following structure:
 
 ~~~
+struct{
+    CertificateType certificate_type  // RFC8442 section 4.4.2
+    select (certificate_type) {
+         case RawPublicKey:
+           /* From RFC 7250 ASN.1_subjectPublicKeyInfo */
+           opaque ASN1_subjectPublicKeyInfo<1..2^24-1>;
+         case X509:
+           opaque cert_data<1..2^24-1>;
+     };
+} TypedCertificate;
 
 struct {
      KeyPairID key_id_type_list<0..255>; 
-     PFSAlgorithmList freshness_funct_list<0..255>
-     OptionList option_list<0..255>
-     Certificate certificate_list  
+     TypedCertificate typed_certificate_list<0..255>  
+     FreshnessFunctList freshness_funct_list<0..255>
+     CipherSuites cipher_suite_list<0..255>
+     PRFHash prf_hash_list<0..255>
 } TLS12RSACapability; 
 
 
 
 struct { 
-    TLS12RSACapability rsa_cap;
-    SignatureAndHashAlgorithm sig_and_hash_list<0..255>
-    NameCurve ecdsa_curves_list<0..255>; 
-    NameCurve ecdhe_curves_list<0..255>
-    POOPRF poo_prf_list<0..255>
+     KeyPairID key_id_type_list<0..255>; 
+     TypedCertificate typed_certificate_list<0..255>  
+     FreshnessFunctList freshness_funct_list<0..255>
+     CipherSuites cipher_suite_list<0..255>
+     SignatureAndHashAlgorithm sig_and_hash_list<0..255>
+     NameCurve ecdsa_curves_list<0..255>; 
+     NameCurve ecdhe_curves_list<0..255>
+     POOPRF poo_prf_list<0..255>
 } TLS12ECDHECapability;  
 
 struct {
@@ -706,7 +728,9 @@ struct {
     TLS12Type type
     Select( type ) {
            case rsa_master : TLS12RSACapability,
+           case rsa_master_with_poh : TLS12RSACapability,
            case rsa_extended_master : TLS12RSACapability,
+           case rsa_extended_master_with_poh : TLS12RSACapability,
            case ecdhe : TLS12ECDHECapability
     } capability ;
 } TLS12Capability 
@@ -718,6 +742,12 @@ struct {
 } TLS12CapabilitiesResponsePayload;
 ~~~
 
+typed_certificate
+: enables to contain authentication credentials of various type, such as
+X09 certificate or raw public key. While different,  the structure is
+similar of CertificateEntry defined in {{!RFC8446}} section 4.4.2 as
+well as the Certificate structure defined in {{!RFC7250}}. 
+
 key_id_type_list
 : the supported key_id_type.
 
@@ -726,7 +756,8 @@ freshness_funct_list
 
 certificate_list
 : designates the certificates associated to message type. The format is
-defined in {{?I-D.ietf-tls-tls13}} in section 4.4.2. This format enables
+similar but different from the CertificateEntry defined in {{!RFC8446}}
+in section 4.4.2 and {{!RFC7250}} section 1. The CertificateBis format enables
 the use of X509 as well as Raw Public key, while the Certificate
 structure defined in {{!RFC5246}} section 7.4.2 does not.
   
@@ -972,14 +1003,15 @@ LURK Extension Description: RSA, ECDHE_RSA and ECDHE_ECDSA for (D)TLS
     4        invalid_key_id_type         [RFC-TBD]
     5        invalid_key_id              [RFC-TBD]
     6        invalid_tls_random          [RFC-TBD]
-    7        invalid_prf                 [RFC-TBD]
+    7        invalid_freshness_funct     [RFC-TBD]
     8        invalid_encrypted_premaster [RFC-TBD]
     9        invalid_finished            [RFC-TBD]
     10       invalid_ec_type             [RFC-TBD]
     11       invalid_ec_curve            [RFC-TBD]
     12       invalid_poo_prf             [RFC-TBD]
     13       invalid_poo                 [RFC-TBD]
-    14 - 255 UNASSIGNED                 
+    14       invalid_cipher_or_prf_hash  [RFC-TBD]
+    15 - 255 UNASSIGNED                 
     
     LURK tls12 Extension Type 
     
@@ -1043,9 +1075,10 @@ Kelsey Cairns.
                         TLS12 Request Header
                         TLS12MasterRSARequestPayload
                             key_id
+                            freshness_funct
+                            prf_hash
                             client_random
                             S
-                            freshness_funct
                             EncryptedPremasterSecret    
                         -------->
     
@@ -1066,6 +1099,63 @@ Kelsey Cairns.
                             Finished
                         <--------
     Application Data      <------->     Application Data
+
+## LURK Exchange for TLS RSA Master Secret with Proof of Handshake 
+
+    TLS Client          Edge Server         Key Server
+    
+    ClientHello
+       server_version  
+       client_random         
+       cipher_suite 
+           TLS_RSA_*, ... 
+    --------> 
+                        S = server_random                          
+                        server_random = freshness_funct( S )
+
+                        ServerHello
+                            tls_version  
+                            server_random        
+                            Cipher_suite=TLS_RSA 
+                        Certificate
+                            RSA Public Key
+                        ServerHelloDone
+                        <-------- 
+    
+    ClientKeyExchange
+        EncryptedPremasterSecret 
+    [ChangeCipherSpec]
+    Finished              
+    -------->  
+    
+    
+                        TLS12 Request Header
+                        TLS12MasterRSAWithPoHRequestPayload
+                            key_id
+                            freshness_funct
+                            handshake_messages
+                            finished    
+                        -------->
+    
+                                     server_random = freshness_funct( S )
+
+                                     master_secret = PRF(\
+                                     pre_master_secret + \
+                                     "master secret" +\
+                                     client_random +\
+                                     server_random)[0..47];
+        
+                                            TLS12 Response Header
+                                            TLS12MasterResponsePayload
+                                                master         
+                                            <--------          
+    
+                        [ChangeCipherSpec]
+                            Finished
+                        <--------
+    Application Data      <------->     Application Data
+
+
 
 ## LURK Exchange for TLS RSA Extended Master Secret 
 
@@ -1093,11 +1183,10 @@ Kelsey Cairns.
     -------->  
                            
                         TLS12 Request Header
-                        TLS12ExtendedMasterRSAInputPayload
+                        TLS12ExtendedMasterRSARequestPayload
                             key_id
-                            tls_version
-                            master_prf
-                            session_hash           
+                            freshness_funct
+                            handshake_messages 
                             EncryptedPreMasterSecret  
                         -------->
     
@@ -1116,6 +1205,57 @@ Kelsey Cairns.
                             Finished
                         <--------
     Application Data      <------->     Application Data
+
+
+## LURK Exchange for TLS RSA Extended Master Secret with proof of handshake
+
+    TLS Client          Edge Server         Key Server
+    
+    ClientHello 
+       tls_version  
+       cipher_suite 
+           TLS_RSA_*, ... 
+       Extension 0x0017 
+    --------> 
+       
+                        ServerHello
+                            edge_server_version  
+                            cipher_suite=TLS_RSA 
+                            Extension 0x0017
+                        Certificate
+                            RSA Public Key
+                        ServerHelloDone
+                        <-------- 
+    ClientKeyExchange
+        EncryptedPremasterSecret 
+    [ChangeCipherSpec]
+    Finished        
+    -------->  
+                           
+                        TLS12 Request Header
+                        TLS12ExtendedMasterWithPoHRequestPayload
+                            key_id
+                            freshness_funct
+                            handshake_messages           
+                            finished 
+                        -------->
+    
+                                     1. Computing Master Secret
+                                     master_secret = master_prf(
+                                     pre_master_secret +\
+                                     "extended master secret" +\
+                                     session_hash)[0..47]
+    
+                                            TLS12 Response Header
+                                            TLS12MasterPayload
+                                                master         
+                                            <--------          
+    
+                        [ChangeCipherSpec]
+                            Finished
+                        <--------
+    Application Data      <------->     Application Data
+
 
 ## LURK Exchange for TLS ECDHE Signature
 
